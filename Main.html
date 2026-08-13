@@ -4,33 +4,41 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>PalaRivals-Watch</title>
+  <title>PalaRivals Watch</title>
   <link rel="stylesheet" href="css/main/Main.css">
-  <meta name="description" content="">
+  <meta name="description" content="Main menu for PalaRivals Watch.">
 </head>
 
-<section id="AccountButtonSection">
-    <button class="AccountButtons" id="SignupButton">Sign Up</button>
-    <button class="AccountButtons" id="LoginButton">Log In</button>
-    <button class="AccountButtons" id="AccountButton">Account</button>
-</section>
+<body>
+  <section id="AccountButtonSection" aria-label="Account options">
+    <button class="AccountButtons" id="SignupButton" type="button">Sign Up</button>
+    <button class="AccountButtons" id="LoginButton" type="button">Log In</button>
+    <button class="AccountButtons hidden" id="AccountButton" type="button">Account</button>
+  </section>
 
-<header>
-    <h1 id="MainMenuTitle">PalaRivals-Watch</h1>
-</header>
+  <main>
+    <header>
+      <p class="eyebrow">Three worlds. One arena.</p>
+      <h1 id="MainMenuTitle">PalaRivals <span>Watch</span></h1>
+      <p class="menu-copy">Build your squad. Outplay the lobby. Be the last team standing.</p>
+    </header>
 
-<section id="MainButtonSection">
-    <button class="MainButtons" id="PlayButton">Play</button>
-    <button class="MainButtons" id="HeroCompendiumButton">Hero Compendium</button>
-</section>
+    <section id="MainButtonSection" aria-label="Main menu">
+      <a class="MainButtons MainButtons--primary" id="PlayButton" href="GameLobby.html">Enter Lobby</a>
+      <button class="MainButtons" id="HeroCompendiumButton" type="button">Hero Compendium</button>
+    </section>
 
-<section id="ThemeChangeSection">
+    <section id="ThemeChangeSection" aria-label="Game universes">
+      <img src="Img/Icons/MarvelRivalsLogo.png" alt="Marvel Rivals">
+      <img src="Img/Icons/PaladinsLogo.png" alt="Paladins">
+      <img src="Img/Icons/OverwatchLogo.png" alt="Overwatch">
+    </section>
+  </main>
 
-</section>
+  <footer>
+    <p>Fan-made project. Characters belong to NetEase Games, Blizzard Entertainment, and Hi-Rez Studios.</p>
+  </footer>
 
-<footer>
-    <p>Disclaimer: We do not own any of the characters used in this game. They are the property of NetEase Games, Blizzard Entertainment, and Hi-Rez Studios.</p>
-</footer>
-
-<script src="js/Main.js></script>
+  <script src="js/main/Main.js"></script>
+</body>
 </html>

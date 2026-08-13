@@ -1,3 +1,172 @@
+:root {
+  color-scheme: dark;
+  --ink: #f6f7fb;
+  --muted: #a9afbf;
+  --cyan: #59e5ff;
+  --orange: #ff9e45;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  color: var(--ink);
+  background:
+    radial-gradient(circle at 75% 16%, rgba(138, 105, 255, 0.24), transparent 31rem),
+    radial-gradient(circle at 18% 75%, rgba(89, 229, 255, 0.15), transparent 30rem),
+    #080b14;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+body::before {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+  background-size: 52px 52px;
+  content: "";
+  mask-image: linear-gradient(to bottom, black, transparent 90%);
+}
+
 .hidden {
-    display: none;
+  display: none;
+}
+
+#AccountButtonSection {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.7rem;
+  padding: 1.4rem clamp(1.2rem, 4vw, 4rem);
+}
+
+.AccountButtons,
+.MainButtons {
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--ink);
+  background: rgba(255, 255, 255, 0.055);
+  font: inherit;
+  font-weight: 750;
+  letter-spacing: 0.05em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.AccountButtons {
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
+}
+
+button {
+  cursor: default;
+}
+
+main {
+  display: grid;
+  min-height: calc(100vh - 12rem);
+  place-content: center;
+  padding: 4rem 1.4rem;
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 0.7rem;
+  color: var(--cyan);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+#MainMenuTitle {
+  max-width: 920px;
+  margin: 0;
+  font-size: clamp(3.25rem, 9vw, 7.8rem);
+  font-style: italic;
+  font-weight: 950;
+  letter-spacing: -0.075em;
+  line-height: 0.83;
+  text-transform: uppercase;
+}
+
+#MainMenuTitle span {
+  display: block;
+  color: transparent;
+  -webkit-text-stroke: 2px var(--orange);
+  text-shadow: 0 0 38px rgba(255, 158, 69, 0.22);
+}
+
+.menu-copy {
+  max-width: 530px;
+  margin: 1.6rem auto 2.1rem;
+  color: var(--muted);
+  font-size: clamp(1rem, 2vw, 1.2rem);
+}
+
+#MainButtonSection {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.8rem;
+}
+
+.MainButtons {
+  min-width: 220px;
+  padding: 1rem 1.4rem;
+  border-radius: 0.8rem;
+}
+
+.MainButtons--primary {
+  border-color: transparent;
+  color: #071018;
+  background: linear-gradient(135deg, var(--cyan), #9ef0ff);
+  box-shadow: 0 0 32px rgba(89, 229, 255, 0.18);
+  cursor: pointer;
+}
+
+#ThemeChangeSection {
+  display: flex;
+  justify-content: center;
+  gap: 1.2rem;
+  margin-top: 3rem;
+}
+
+#ThemeChangeSection img {
+  width: 42px;
+  height: 42px;
+  padding: 0.3rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  object-fit: contain;
+  opacity: 0.72;
+}
+
+footer {
+  padding: 1.2rem;
+  color: #707687;
+  font-size: 0.72rem;
+  text-align: center;
+}
+
+footer p {
+  margin: 0;
+}
+
+@media (max-width: 540px) {
+  #AccountButtonSection {
+    padding: 1rem;
+  }
+
+  main {
+    padding-top: 2rem;
+  }
+
+  .MainButtons {
+    width: 100%;
+  }
 }
