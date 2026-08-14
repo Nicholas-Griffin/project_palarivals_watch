@@ -69,11 +69,30 @@ button {
 button:hover{
     background: rgb(186, 104, 104);
     color: black;
+    animation: ButtonMorph 200ms ease-in;
+}
+
+@keyframes ButtonMorph {
+    from {
+        transform: translateY(-3px);
+    } to {
+        transform: translateY(3px);
+    }
 }
 
 #PlayButton:hover {
     background: linear-gradient(130deg, var(--cyan), rgb(207, 97, 97));
     border: rgb(207, 97, 97);
+
+animation: PlayButtonMorph 200ms ease-in-out;
+}
+
+@keyframes PlayButtonMorph {
+    from {
+        transform: translate3d(2px, 1px, 0);
+    } to {
+        transform: translate3d(-2px, -1px, 0);
+    }
 }
 
 main {
