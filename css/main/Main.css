@@ -23,10 +23,10 @@ body {
 }
 
 body::before {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background-image:
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    background-image:
     linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
   background-size: 52px 52px;
@@ -64,6 +64,16 @@ body::before {
 
 button {
   cursor: default;
+}
+
+button:hover{
+    background: rgb(186, 104, 104);
+    color: black;
+}
+
+#PlayButton:hover {
+    background: linear-gradient(130deg, var(--cyan), rgb(207, 97, 97));
+    border: rgb(207, 97, 97);
 }
 
 main {
