@@ -58,6 +58,22 @@ const SHOP_UPGRADE_COSTS = { 1: 4, 2: 6, 3: 8 };
 const BUILD_PHASE_DURATION = 60_000;
 const COMBAT_EVENT_DURATION = 620;
 const COMBAT_RESULT_DURATION = 6_000;
+const AI_NAME_SOURCE = "data/ai-names.json";
+const HERO_ABILITY_SOURCE = "data/hero-abilities.json";
+const FALLBACK_AI_NAMES = [
+  "NovaVex",
+  "RocketLynx",
+  "ArcRunner",
+  "PalKeeper",
+  "StarTank",
+  "HeroDraft",
+  "Nexus",
+  "NeonVanguard",
+  "QuantumWarden",
+  "PixelPhantom",
+  "SolarStriker",
+  "VoidRanger",
+];
 let buildTimerInterval = null;
 let combatPhaseTimeout = null;
 let nextRoundTimeout = null;
@@ -113,6 +129,98 @@ const shopHeroes = new Map(
 
 let pointerDrag = null;
 let exitTrigger = null;
+
+async function loadHeroAbilities() {
+  try {
+    const response = await fetch(HERO_ABILITY_SOURCE, { cache: "no-store" });
+
+    if (!response.ok) {
+      throw new Error(`Hero ability list returned ${response.status}.`);
+    }
+
+    const abilityData = await response.json();
+    const abilities = abilityData?.abilities || {};
+
+    heroCatalog.forEach((hero) => {
+      hero.ability = abilities[hero.id] || null;
+    });
+  } catch {
+    heroCatalog.forEach((hero) => {
+      hero.ability = null;
+    });
+  }
+}
+
+function createPlayerInitials(name) {
+  const words = name
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .split(/[^a-z0-9]+/i)
+    .filter(Boolean);
+
+  if (words.length > 1) {
+    return `${words[0][0]}${words[1][0]}`.toUpperCase();
+  }
+
+  return (words[0] || "AI").slice(0, 2).toUpperCase();
+}
+
+function shuffledUniqueNames(names, count) {
+  const seenNames = new Set(["you"]);
+  const uniqueNames = names.reduce((pool, name) => {
+    const cleanName = typeof name === "string" ? name.trim() : "";
+    const nameKey = cleanName.toLocaleLowerCase();
+
+    if (cleanName && !seenNames.has(nameKey)) {
+      seenNames.add(nameKey);
+      pool.push(cleanName);
+    }
+
+    return pool;
+  }, []);
+
+  for (let index = uniqueNames.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [uniqueNames[index], uniqueNames[randomIndex]] = [uniqueNames[randomIndex], uniqueNames[index]];
+  }
+
+  return uniqueNames.slice(0, count);
+}
+
+async function assignRandomAiNames() {
+  const aiPlayers = players.filter((player) => !player.isHuman);
+  let availableNames = FALLBACK_AI_NAMES;
+
+  try {
+    const response = await fetch(AI_NAME_SOURCE, { cache: "no-store" });
+
+    if (!response.ok) {
+      throw new Error(`AI name list returned ${response.status}.`);
+    }
+
+    const nameData = await response.json();
+
+    if (Array.isArray(nameData.names)) {
+      availableNames = nameData.names;
+    }
+  } catch {
+    availableNames = FALLBACK_AI_NAMES;
+  }
+
+  let selectedNames = shuffledUniqueNames(availableNames, aiPlayers.length);
+
+  if (selectedNames.length < aiPlayers.length) {
+    selectedNames = shuffledUniqueNames(
+      [...selectedNames, ...FALLBACK_AI_NAMES],
+      aiPlayers.length,
+    );
+  }
+
+  aiPlayers.forEach((player, index) => {
+    const randomName = selectedNames[index] || `Rival${index + 1}`;
+    player.name = randomName;
+    player.initials = createPlayerInitials(randomName);
+  });
+}
 
 function announce(message) {
   gameStatusElement.textContent = "";
@@ -481,6 +589,22 @@ function updateHud() {
   renderReadyButton();
 }
 
+function heroInspectContent(hero) {
+  const ability = hero.ability;
+
+  return `
+    <span class="hero-inspect__eyebrow">Hero Dossier</span>
+    <strong class="hero-inspect__name">${hero.name}</strong>
+    <span class="hero-inspect__stats">
+      <i><b>✦</b> ${hero.power} Power</i>
+      <i><b>♥</b> ${hero.health} Health</i>
+    </span>
+    <span class="hero-inspect__ability-type">${ability?.type || "Standard"} Ability</span>
+    <strong class="hero-inspect__ability-name">${ability?.name || "Standard Attack"}</strong>
+    <span class="hero-inspect__description">${ability?.description || "Attacks the enemy directly."}</span>
+  `;
+}
+
 function setShopCardHero(card, catalogHero) {
   const shopSlotId = card.dataset.shopId;
   const buyButton = card.querySelector(".shop-card__buy");
@@ -501,13 +625,45 @@ function setShopCardHero(card, catalogHero) {
   delete card.dataset.suppressClick;
   card.setAttribute(
     "aria-label",
-    `${catalogHero.name}, tier ${catalogHero.tier}, cost ${catalogHero.cost} credits`,
+    `${catalogHero.name}, tier ${catalogHero.tier}, cost ${catalogHero.cost} credits${catalogHero.ability ? `. Ability: ${catalogHero.ability.name}. ${catalogHero.ability.description}` : ""}`,
   );
 
   const heroImage = card.querySelector("img:not(.universe-badge)");
   heroImage.src = catalogHero.image;
   heroImage.alt = catalogHero.name;
   card.querySelector(".universe-badge").src = catalogHero.logo;
+  let abilityBadge = card.querySelector(".shop-card__ability");
+
+  if (!abilityBadge) {
+    abilityBadge = document.createElement("span");
+    abilityBadge.className = "shop-card__ability";
+    card.insertBefore(abilityBadge, buyButton);
+  }
+
+  abilityBadge.hidden = !catalogHero.ability;
+  abilityBadge.textContent = catalogHero.ability ? "A" : "";
+  abilityBadge.title = catalogHero.ability
+    ? `${catalogHero.ability.name} — ${catalogHero.ability.description}`
+    : "";
+  abilityBadge.setAttribute(
+    "aria-label",
+    catalogHero.ability
+      ? `${catalogHero.ability.name}: ${catalogHero.ability.description}`
+      : "No ability",
+  );
+  const tooltipId = `shop-hero-inspect-${shopSlotId}`;
+  let heroInspect = card.querySelector(".hero-inspect");
+
+  if (!heroInspect) {
+    heroInspect = document.createElement("div");
+    heroInspect.className = "hero-inspect hero-inspect--shop";
+    heroInspect.setAttribute("role", "tooltip");
+    card.insertBefore(heroInspect, buyButton);
+  }
+
+  heroInspect.id = tooltipId;
+  heroInspect.innerHTML = heroInspectContent(catalogHero);
+  card.setAttribute("aria-describedby", tooltipId);
   buyButton.querySelector("span").textContent = "Buy";
   buyButton.querySelector("strong").innerHTML = `<i>◆</i> ${catalogHero.cost}`;
 
@@ -606,11 +762,13 @@ function formatBuildTime(seconds) {
 }
 
 function combatHeroMarkup(hero, index) {
+  const abilityName = hero.ability?.name || "Standard Attack";
+
   return `
-    <figure class="combat-unit" data-combat-index="${index}" style="--unit-delay: ${index * 90}ms">
+    <figure class="combat-unit" data-combat-index="${index}" style="--unit-delay: ${index * 90}ms" title="${abilityName}${hero.ability ? ` — ${hero.ability.description}` : ""}">
       <img src="${hero.image}" alt="${hero.name}">
       <span class="combat-unit__health" aria-hidden="true"><i style="width: 100%"></i></span>
-      <figcaption><strong>${hero.name}</strong><span>✦ ${hero.power} · ♥ ${hero.health}</span></figcaption>
+      <figcaption><strong>${hero.name}</strong><em>${abilityName}</em><span>✦ ${hero.power} · ♥ ${hero.health}</span></figcaption>
     </figure>
   `;
 }
@@ -623,8 +781,20 @@ function renderCombatTeam(container, team) {
 }
 
 function simulateBattle(firstPlayer, secondPlayer) {
-  const firstSquad = firstPlayer.team.filter(Boolean).map((hero) => ({ ...hero, currentHealth: hero.health }));
-  const secondSquad = secondPlayer.team.filter(Boolean).map((hero) => ({ ...hero, currentHealth: hero.health }));
+  const createFighter = (hero) => {
+    const effects = hero.ability?.effects || {};
+    const maxHealth = hero.health + (effects.bonusHealth || 0);
+
+    return {
+      ...hero,
+      power: hero.power + (effects.bonusPower || 0),
+      maxHealth,
+      currentHealth: maxHealth,
+      attacksMade: 0,
+    };
+  };
+  const firstSquad = firstPlayer.team.filter(Boolean).map(createFighter);
+  const secondSquad = secondPlayer.team.filter(Boolean).map(createFighter);
   const events = [];
 
   if (!firstSquad.length && !secondSquad.length) {
@@ -654,13 +824,75 @@ function simulateBattle(firstPlayer, secondPlayer) {
   while (firstFront < firstSquad.length && secondFront < secondSquad.length && turns < 180) {
     const attacker = firstAttacks ? firstSquad[firstFront] : secondSquad[secondFront];
     const defender = firstAttacks ? secondSquad[secondFront] : firstSquad[firstFront];
-    const criticalBonus = Math.random() < 0.14 ? 3 : 0;
-    const damage = Math.max(
-      1,
-      attacker.power + criticalBonus + Math.floor(Math.random() * 3) - Math.floor(defender.health / 6),
-    );
-    defender.currentHealth -= damage;
+    const attackerEffects = attacker.ability?.effects || {};
+    const defenderEffects = defender.ability?.effects || {};
+    const abilityNames = [];
+    const dodged = Math.random() < (defenderEffects.dodgeChance || 0);
+    const critical = !dodged && Math.random() < (0.14 + (attackerEffects.critChance || 0));
+    const firstStrikeBonus = attacker.attacksMade === 0 ? (attackerEffects.firstStrikeBonus || 0) : 0;
+    const executeBonus = defender.currentHealth / defender.maxHealth <= (attackerEffects.executeThreshold || 0)
+      ? (attackerEffects.executeBonus || 0)
+      : 0;
+    const criticalBonus = critical ? 3 + (attackerEffects.critDamage || 0) : 0;
+    let damage = 0;
+
+    if (dodged) {
+      abilityNames.push(defender.ability?.name);
+    } else {
+      damage = Math.max(
+        1,
+        attacker.power
+          + criticalBonus
+          + firstStrikeBonus
+          + executeBonus
+          + Math.floor(Math.random() * 3)
+          - Math.floor(defender.maxHealth / 6)
+          - (defenderEffects.damageReduction || 0),
+      );
+      defender.currentHealth -= damage;
+
+      if (firstStrikeBonus || executeBonus || (critical && attackerEffects.critChance)) {
+        abilityNames.push(attacker.ability?.name);
+      }
+    }
+
     const defenderDefeated = defender.currentHealth <= 0;
+    let healing = 0;
+    let retaliationDamage = 0;
+
+    if (damage > 0 && attackerEffects.lifesteal && attacker.currentHealth > 0) {
+      healing = Math.min(
+        attacker.maxHealth - attacker.currentHealth,
+        Math.max(1, Math.ceil(damage * attackerEffects.lifesteal)),
+      );
+      attacker.currentHealth += healing;
+
+      if (healing > 0) {
+        abilityNames.push(attacker.ability?.name);
+      }
+    }
+
+    if (damage > 0 && defenderEffects.thorns) {
+      retaliationDamage = defenderEffects.thorns;
+      attacker.currentHealth -= retaliationDamage;
+      abilityNames.push(defender.ability?.name);
+    }
+
+    if (defenderDefeated && attackerEffects.onKillHeal && attacker.currentHealth > 0) {
+      const knockoutHealing = Math.min(
+        attacker.maxHealth - attacker.currentHealth,
+        attackerEffects.onKillHeal,
+      );
+      attacker.currentHealth += knockoutHealing;
+      healing += knockoutHealing;
+
+      if (knockoutHealing > 0) {
+        abilityNames.push(attacker.ability?.name);
+      }
+    }
+
+    attacker.attacksMade += 1;
+    const attackerDefeated = attacker.currentHealth <= 0;
 
     if (events.length < 48) {
       events.push({
@@ -672,17 +904,34 @@ function simulateBattle(firstPlayer, secondPlayer) {
         defenderName: defender.name,
         damage,
         remainingHealth: Math.max(0, defender.currentHealth),
-        maxHealth: defender.health,
+        maxHealth: defender.maxHealth,
         defeated: defenderDefeated,
-        critical: criticalBonus > 0,
+        critical,
+        dodged,
+        healing,
+        retaliationDamage,
+        attackerRemainingHealth: Math.max(0, attacker.currentHealth),
+        attackerMaxHealth: attacker.maxHealth,
+        attackerDefeated,
+        abilityNames: [...new Set(abilityNames.filter(Boolean))],
       });
     }
 
-    if (defenderDefeated) {
-      if (firstAttacks) {
+    if (firstAttacks) {
+      if (defenderDefeated) {
         secondFront += 1;
-      } else {
+      }
+
+      if (attackerDefeated) {
         firstFront += 1;
+      }
+    } else {
+      if (defenderDefeated) {
+        firstFront += 1;
+      }
+
+      if (attackerDefeated) {
+        secondFront += 1;
       }
     }
 
@@ -690,7 +939,11 @@ function simulateBattle(firstPlayer, secondPlayer) {
     turns += 1;
   }
 
-  const firstWon = secondFront >= secondSquad.length;
+  const firstEliminated = firstFront >= firstSquad.length;
+  const secondEliminated = secondFront >= secondSquad.length;
+  const firstWon = firstEliminated && secondEliminated
+    ? Math.random() >= 0.5
+    : secondEliminated;
   const winningSquad = firstWon ? firstSquad : secondSquad;
 
   return {
@@ -723,29 +976,49 @@ function playCombatEvents(result, eventIndex = 0) {
     return;
   }
 
-  combatArena.querySelectorAll(".combat-unit--attacking, .combat-unit--hit").forEach((unit) => {
-    unit.classList.remove("combat-unit--attacking", "combat-unit--hit");
+  combatArena.querySelectorAll(".combat-unit--attacking, .combat-unit--hit, .combat-unit--dodged").forEach((unit) => {
+    unit.classList.remove("combat-unit--attacking", "combat-unit--hit", "combat-unit--dodged");
   });
 
   const attackerUnit = getCombatUnit(combatEvent.attackerSide, combatEvent.attackerIndex);
   const defenderUnit = getCombatUnit(combatEvent.defenderSide, combatEvent.defenderIndex);
   const defenderHealth = defenderUnit?.querySelector(".combat-unit__health i");
+  const attackerHealth = attackerUnit?.querySelector(".combat-unit__health i");
   const healthPercent = (combatEvent.remainingHealth / combatEvent.maxHealth) * 100;
+  const attackerHealthPercent = (combatEvent.attackerRemainingHealth / combatEvent.attackerMaxHealth) * 100;
 
   attackerUnit?.classList.add("combat-unit--attacking");
-  defenderUnit?.classList.add("combat-unit--hit");
+  defenderUnit?.classList.add(combatEvent.dodged ? "combat-unit--dodged" : "combat-unit--hit");
 
   if (defenderHealth) {
     defenderHealth.style.width = `${Math.max(0, healthPercent)}%`;
+  }
+
+  if (attackerHealth) {
+    attackerHealth.style.width = `${Math.max(0, attackerHealthPercent)}%`;
   }
 
   if (combatEvent.defeated) {
     defenderUnit?.classList.add("combat-unit--defeated");
   }
 
-  combatFeed.innerHTML = combatEvent.defeated
-    ? `<strong>KO!</strong> ${combatEvent.attackerName} eliminated ${combatEvent.defenderName}.`
-    : `<strong>${combatEvent.critical ? "Critical hit!" : "Attack"}</strong> ${combatEvent.attackerName} dealt ${combatEvent.damage} damage to ${combatEvent.defenderName}.`;
+  if (combatEvent.attackerDefeated) {
+    attackerUnit?.classList.add("combat-unit--defeated");
+  }
+
+  const abilityCallout = combatEvent.abilityNames.length
+    ? `${combatEvent.abilityNames.join(" + ")}!`
+    : (combatEvent.critical ? "Critical hit!" : "Attack");
+  const recoveryText = combatEvent.healing ? ` ${combatEvent.attackerName} restored ${combatEvent.healing} health.` : "";
+  const retaliationText = combatEvent.retaliationDamage ? ` ${combatEvent.attackerName} took ${combatEvent.retaliationDamage} retaliation damage.` : "";
+
+  if (combatEvent.dodged) {
+    combatFeed.innerHTML = `<strong>${abilityCallout}</strong> ${combatEvent.defenderName} dodged ${combatEvent.attackerName}'s attack.`;
+  } else if (combatEvent.defeated) {
+    combatFeed.innerHTML = `<strong>${abilityCallout}</strong> ${combatEvent.attackerName} eliminated ${combatEvent.defenderName}.${recoveryText}${retaliationText}`;
+  } else {
+    combatFeed.innerHTML = `<strong>${abilityCallout}</strong> ${combatEvent.attackerName} dealt ${combatEvent.damage} damage to ${combatEvent.defenderName}.${recoveryText}${retaliationText}`;
+  }
   combatPhaseTimeout = window.setTimeout(
     () => playCombatEvents(result, eventIndex + 1),
     COMBAT_EVENT_DURATION,
@@ -1044,12 +1317,15 @@ function heroSellValue(hero) {
 function deployedHeroMarkup(hero, slotIndex) {
   const slotNumber = String(slotIndex + 1).padStart(2, "0");
   const sellValue = heroSellValue(hero);
+  const tooltipId = `team-hero-inspect-${slotIndex}`;
 
   return `
-    <div class="hero-card hero-card--${hero.universe}" draggable="true" data-team-slot="${slotIndex}" tabindex="0" role="button" aria-label="${hero.name} in team slot ${slotIndex + 1}. Drag to move.">
+    <div class="hero-card hero-card--${hero.universe}" draggable="true" data-team-slot="${slotIndex}" tabindex="0" role="button" aria-label="${hero.name} in team slot ${slotIndex + 1}. Power ${hero.power}, health ${hero.health}. Ability: ${hero.ability?.name || "Standard Attack"}. Drag to move." aria-describedby="${tooltipId}">
       <span class="hero-card__slot">${slotNumber}</span>
       <img src="${hero.image}" alt="${hero.name}">
       <img class="universe-badge" src="${hero.logo}" alt="">
+      ${hero.ability ? `<span class="hero-card__ability" title="${hero.ability.name} — ${hero.ability.description}" aria-label="${hero.ability.name}: ${hero.ability.description}">A</span>` : ""}
+      <div class="hero-inspect hero-inspect--team" id="${tooltipId}" role="tooltip">${heroInspectContent(hero)}</div>
       <button class="hero-card__sell" type="button" data-sell-slot="${slotIndex}" aria-label="Sell ${hero.name} for ${sellValue} credits">Sell <strong>+◆ ${sellValue}</strong></button>
       <span class="level-badge">LV 1</span>
       <div class="hero-stats" aria-label="Power ${hero.power}, health ${hero.health}">
@@ -1405,6 +1681,11 @@ stayInGameButton.addEventListener("click", closeLeaveGameModal);
 closeLeaveModalButtons.forEach((button) => button.addEventListener("click", closeLeaveGameModal));
 document.addEventListener("keydown", handleModalKeyboard);
 
-initializeRandomShop();
-renderTeam();
-startBuildTimer();
+async function initializeGame() {
+  await Promise.all([assignRandomAiNames(), loadHeroAbilities()]);
+  initializeRandomShop();
+  renderTeam();
+  startBuildTimer();
+}
+
+initializeGame();
