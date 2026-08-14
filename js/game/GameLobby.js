@@ -14,6 +14,25 @@ const shopTierElement = document.querySelector("#shopTierValue");
 const buildTimerElement = document.querySelector("#buildTimer");
 const buildTimerChip = buildTimerElement.closest(".hud-chip");
 const buildTimerRing = buildTimerChip.querySelector(".timer-ring");
+const playerHealthElement = document.querySelector("#playerHealth");
+const roundValueElement = document.querySelector("#roundValue");
+const teamTitleElement = document.querySelector("#team-title");
+const teamKickerElement = document.querySelector(".stage-header .kicker");
+const combatArena = document.querySelector("#combatArena");
+const playerCombatTeam = document.querySelector("#playerCombatTeam");
+const enemyCombatTeam = document.querySelector("#enemyCombatTeam");
+const enemyCombatName = document.querySelector("#enemyCombatName");
+const combatFeed = document.querySelector("#combatFeed");
+const playerListElement = document.querySelector("#playerList");
+const onlineCountElement = document.querySelector("#onlineCount");
+const nextThreatNameElement = document.querySelector("#nextThreatName");
+const nextThreatStatusElement = document.querySelector("#nextThreatStatus");
+const matchPhaseLabel = document.querySelector("#matchPhaseLabel");
+const matchResult = document.querySelector("#matchResult");
+const matchResultKicker = document.querySelector("#matchResultKicker");
+const matchResultTitle = document.querySelector("#matchResultTitle");
+const matchResultDescription = document.querySelector("#matchResultDescription");
+const readyButton = document.querySelector("#readyButton");
 const brandExit = document.querySelector("#brandExit");
 const leaveGameButton = document.querySelector("#leaveGameButton");
 const leaveGameModal = document.querySelector("#leaveGameModal");
@@ -23,8 +42,12 @@ const closeLeaveModalButtons = [...document.querySelectorAll("[data-close-leave-
 const gameState = {
   credits: Number(creditsElement.textContent),
   shopTier: 1,
+  round: 1,
+  phase: "build",
   buildPhaseActive: true,
   buildEndsAt: null,
+  pairings: [],
+  combatResults: [],
   selectedShopId: null,
   team: Array(6).fill(null),
   drag: null,
@@ -33,7 +56,13 @@ const gameState = {
 const MAX_SHOP_TIER = 4;
 const SHOP_UPGRADE_COSTS = { 1: 4, 2: 6, 3: 8 };
 const BUILD_PHASE_DURATION = 60_000;
+const COMBAT_EVENT_DURATION = 620;
+const COMBAT_RESULT_DURATION = 6_000;
 let buildTimerInterval = null;
+let combatPhaseTimeout = null;
+let nextRoundTimeout = null;
+let readyLaunchTimeout = null;
+let aiBuildTimers = [];
 
 const heroCatalog = [
   { id: "groot", name: "Groot", universe: "marvel", image: "Img/Characters/MarvelRivals/GrootPNG.jpeg", logo: "Img/Icons/MarvelRivalsLogo.png", power: 5, health: 10, cost: 3, tier: 1 },
@@ -51,6 +80,17 @@ const heroCatalog = [
   { id: "moji", name: "Moji", universe: "paladins", image: "Img/Characters/Paladins/MojiPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 5, health: 6, cost: 2, tier: 1 },
   { id: "raum", name: "Raum", universe: "paladins", image: "Img/Characters/Paladins/RaumPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 7, health: 12, cost: 4, tier: 3 },
   { id: "seris", name: "Seris", universe: "paladins", image: "Img/Characters/Paladins/SerisPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 4, health: 8, cost: 3, tier: 2 },
+];
+
+const players = [
+  { id: "player", name: "You", initials: "YO", avatar: "cyan", hp: 100, team: gameState.team, isHuman: true, eliminated: false, ready: false, buildStatus: "Commanding" },
+  { id: "novavex", name: "NovaVex", initials: "NV", avatar: "violet", hp: 100, team: [], isHuman: false, eliminated: false, ready: false, buildStatus: "Preparing" },
+  { id: "rocketlynx", name: "RocketLynx", initials: "RL", avatar: "orange", hp: 100, team: [], isHuman: false, eliminated: false, ready: false, buildStatus: "Preparing" },
+  { id: "arcrunner", name: "ArcRunner", initials: "AR", avatar: "pink", hp: 100, team: [], isHuman: false, eliminated: false, ready: false, buildStatus: "Preparing" },
+  { id: "palkeeper", name: "PalKeeper", initials: "PK", avatar: "green", hp: 100, team: [], isHuman: false, eliminated: false, ready: false, buildStatus: "Preparing" },
+  { id: "startank", name: "StarTank", initials: "ST", avatar: "blue", hp: 100, team: [], isHuman: false, eliminated: false, ready: false, buildStatus: "Preparing" },
+  { id: "herodraft", name: "HeroDraft", initials: "HD", avatar: "yellow", hp: 100, team: [], isHuman: false, eliminated: false, ready: false, buildStatus: "Preparing" },
+  { id: "nexus", name: "Nexus", initials: "NX", avatar: "red", hp: 100, team: [], isHuman: false, eliminated: false, ready: false, buildStatus: "Preparing" },
 ];
 
 const shopHeroes = new Map(
@@ -125,10 +165,293 @@ function handleModalKeyboard(event) {
   }
 }
 
+function getHumanPlayer() {
+  return players.find((player) => player.isHuman);
+}
+
+function getAlivePlayers() {
+  return players.filter((player) => !player.eliminated);
+}
+
+function renderReadyButton() {
+  const humanPlayer = getHumanPlayer();
+  const canReady = gameState.phase === "build" && gameState.buildPhaseActive && !humanPlayer.eliminated;
+  readyButton.disabled = !canReady;
+  readyButton.classList.toggle("ready-button--active", humanPlayer.ready && canReady);
+  readyButton.setAttribute("aria-pressed", String(humanPlayer.ready && canReady));
+  readyButton.querySelector("strong").textContent = humanPlayer.ready && canReady ? "Ready!" : "Ready";
+}
+
+function checkAllPlayersReady() {
+  if (gameState.phase !== "build" || !gameState.buildPhaseActive) {
+    return;
+  }
+
+  const alivePlayers = getAlivePlayers();
+  const readyPlayers = alivePlayers.filter((player) => player.ready);
+
+  if (readyPlayers.length !== alivePlayers.length) {
+    window.clearTimeout(readyLaunchTimeout);
+    readyLaunchTimeout = null;
+    matchPhaseLabel.textContent = `${readyPlayers.length}/${alivePlayers.length} ready`;
+    return;
+  }
+
+  if (!readyLaunchTimeout) {
+    matchPhaseLabel.textContent = "All ready · deploying";
+    announce("All active players are ready. Combat is starting early.");
+    readyLaunchTimeout = window.setTimeout(() => {
+      readyLaunchTimeout = null;
+      finishBuildPhase();
+    }, 900);
+  }
+}
+
+function markHumanNotReady() {
+  const humanPlayer = getHumanPlayer();
+
+  if (!humanPlayer.ready || gameState.phase !== "build") {
+    return;
+  }
+
+  humanPlayer.ready = false;
+  window.clearTimeout(readyLaunchTimeout);
+  readyLaunchTimeout = null;
+  renderReadyButton();
+  renderLeaderboard();
+  checkAllPlayersReady();
+}
+
+function toggleHumanReady() {
+  if (gameState.phase !== "build" || !gameState.buildPhaseActive) {
+    return;
+  }
+
+  const humanPlayer = getHumanPlayer();
+  humanPlayer.ready = !humanPlayer.ready;
+  renderReadyButton();
+  renderLeaderboard();
+  announce(humanPlayer.ready ? "You are ready for combat." : "Ready status cancelled.");
+  checkAllPlayersReady();
+}
+
+function shuffleArray(items) {
+  const shuffled = [...items];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+function renderLeaderboard() {
+  const rankedPlayers = [...players].sort((first, second) => {
+    if (first.eliminated !== second.eliminated) {
+      return Number(first.eliminated) - Number(second.eliminated);
+    }
+
+    return second.hp - first.hp;
+  });
+
+  playerListElement.innerHTML = rankedPlayers.map((player, index) => {
+    const status = player.eliminated
+      ? "Eliminated"
+      : player.isHuman
+        ? (gameState.phase === "combat"
+          ? "In combat"
+          : `${player.ready ? "Ready · " : ""}${player.team.filter(Boolean).length}/6 deployed`)
+        : player.buildStatus;
+    const commanderTag = player.isHuman ? "<small>Commander</small>" : "";
+
+    return `
+      <li class="player-row${player.isHuman ? " player-row--you" : ""}${player.ready && !player.eliminated ? " player-row--ready" : ""}${player.eliminated ? " player-row--eliminated" : ""}" data-player-id="${player.id}">
+        <span class="rank">${String(index + 1).padStart(2, "0")}</span>
+        <span class="player-avatar avatar--${player.avatar}">${player.initials}</span>
+        <div class="player-data">
+          <span class="player-name">${player.name} ${commanderTag}</span>
+          <span class="player-status">${status}</span>
+          <span class="hp-track"><i style="--hp: ${player.hp}%"></i></span>
+        </div>
+        <span class="hp-value">${player.eliminated ? "OUT" : player.hp}</span>
+      </li>
+    `;
+  }).join("");
+
+  onlineCountElement.textContent = getAlivePlayers().length;
+}
+
+function getHumanPairing() {
+  return gameState.pairings.find((pairing) => pairing.some((player) => player.isHuman));
+}
+
+function renderThreatPreview() {
+  const pairing = getHumanPairing();
+  const opponent = pairing?.find((player) => !player.isHuman);
+
+  if (!opponent) {
+    nextThreatNameElement.textContent = "Awaiting Pairing";
+    nextThreatStatusElement.textContent = "Scanning remaining combatants";
+    return;
+  }
+
+  nextThreatNameElement.textContent = opponent.name;
+  nextThreatStatusElement.textContent = opponent.isGhost
+    ? "Echo squad detected"
+    : `${opponent.ready ? "Ready" : opponent.buildStatus} · ${opponent.team.length}/6 heroes`;
+}
+
+function aiTeamTargetSize() {
+  return Math.min(6, gameState.round + 2);
+}
+
+function aiShopTier() {
+  return Math.min(MAX_SHOP_TIER, 1 + Math.floor((gameState.round - 1) / 2));
+}
+
+function chooseAiHero(aiPlayer) {
+  const maxTier = aiShopTier();
+  const ownedIds = new Set(aiPlayer.team.map((hero) => hero.id));
+  let candidates = heroCatalog.filter((hero) => hero.tier <= maxTier && !ownedIds.has(hero.id));
+
+  if (!candidates.length) {
+    candidates = heroCatalog.filter((hero) => hero.tier <= maxTier);
+  }
+
+  const weightedCandidates = candidates
+    .map((hero) => ({ hero, score: hero.power + hero.health + (Math.random() * 8) }))
+    .sort((first, second) => second.score - first.score)
+    .slice(0, Math.max(3, Math.ceil(candidates.length / 2)));
+
+  return { ...weightedCandidates[Math.floor(Math.random() * weightedCandidates.length)].hero };
+}
+
+function runAiBuildAction(aiPlayer) {
+  if (gameState.phase !== "build" || aiPlayer.eliminated) {
+    return;
+  }
+
+  const targetSize = aiTeamTargetSize();
+
+  if (aiPlayer.team.length < targetSize) {
+    aiPlayer.team.push(chooseAiHero(aiPlayer));
+  } else if (gameState.round > 1) {
+    const replacement = chooseAiHero(aiPlayer);
+    const weakestIndex = aiPlayer.team.reduce((weakest, hero, index, team) => {
+      const heroScore = hero.power + hero.health;
+      const weakestScore = team[weakest].power + team[weakest].health;
+      return heroScore < weakestScore ? index : weakest;
+    }, 0);
+    const weakestHero = aiPlayer.team[weakestIndex];
+
+    if ((replacement.power + replacement.health) > (weakestHero.power + weakestHero.health)) {
+      aiPlayer.team[weakestIndex] = replacement;
+    }
+  }
+
+  aiPlayer.buildStatus = aiPlayer.team.length >= targetSize
+    ? "Squad ready"
+    : `Recruiting ${aiPlayer.team.length}/${targetSize}`;
+  aiPlayer.ready = aiPlayer.team.length >= targetSize;
+  renderLeaderboard();
+  renderThreatPreview();
+  checkAllPlayersReady();
+}
+
+function clearAiBuildTimers() {
+  aiBuildTimers.forEach((timer) => window.clearTimeout(timer));
+  aiBuildTimers = [];
+}
+
+function scheduleAiBuilds() {
+  clearAiBuildTimers();
+  const targetSize = aiTeamTargetSize();
+
+  players.filter((player) => !player.isHuman && !player.eliminated).forEach((aiPlayer) => {
+    aiPlayer.ready = false;
+    aiPlayer.buildStatus = `Recruiting ${Math.min(aiPlayer.team.length, targetSize)}/${targetSize}`;
+    const actions = Math.max(1, targetSize - aiPlayer.team.length + (gameState.round > 1 ? 1 : 0));
+
+    for (let actionIndex = 0; actionIndex < actions; actionIndex += 1) {
+      const delay = 1_200
+        + (((actionIndex + 1) / (actions + 1)) * (BUILD_PHASE_DURATION * 0.68))
+        + (Math.random() * 1_500);
+      aiBuildTimers.push(window.setTimeout(() => runAiBuildAction(aiPlayer), delay));
+    }
+  });
+
+  renderLeaderboard();
+  renderThreatPreview();
+}
+
+function completeAiBuilds() {
+  clearAiBuildTimers();
+  const targetSize = aiTeamTargetSize();
+
+  players.filter((player) => !player.isHuman && !player.eliminated).forEach((aiPlayer) => {
+    while (aiPlayer.team.length < targetSize) {
+      aiPlayer.team.push(chooseAiHero(aiPlayer));
+    }
+    aiPlayer.ready = true;
+    aiPlayer.buildStatus = "Squad locked";
+  });
+
+  gameState.pairings.flat().filter((player) => player.isGhost).forEach((ghostPlayer) => {
+    const sourcePlayer = players.find((player) => player.id === ghostPlayer.ghostSourceId);
+
+    if (sourcePlayer) {
+      ghostPlayer.team = sourcePlayer.team.map((hero) => ({ ...hero }));
+      ghostPlayer.hp = sourcePlayer.hp;
+    }
+  });
+
+  renderLeaderboard();
+  renderThreatPreview();
+}
+
+function prepareRoundPairings() {
+  const alivePlayers = getAlivePlayers();
+  const humanPlayer = alivePlayers.find((player) => player.isHuman);
+  const remainingPlayers = shuffleArray(alivePlayers.filter((player) => !player.isHuman));
+  const pairings = [];
+
+  if (humanPlayer && remainingPlayers.length) {
+    pairings.push([humanPlayer, remainingPlayers.shift()]);
+  }
+
+  while (remainingPlayers.length >= 2) {
+    pairings.push([remainingPlayers.shift(), remainingPlayers.shift()]);
+  }
+
+  if (remainingPlayers.length === 1) {
+    const soloPlayer = remainingPlayers.shift();
+    const ghostSource = shuffleArray(alivePlayers.filter((player) => player.id !== soloPlayer.id))[0];
+    pairings.push([
+      soloPlayer,
+      {
+        ...ghostSource,
+        id: `ghost-${gameState.round}-${ghostSource.id}`,
+        name: `${ghostSource.name} Echo`,
+        team: ghostSource.team.map((hero) => ({ ...hero })),
+        ghostSourceId: ghostSource.id,
+        isGhost: true,
+        isHuman: false,
+      },
+    ]);
+  }
+
+  gameState.pairings = pairings;
+  renderThreatPreview();
+}
+
 function updateHud() {
+  const humanPlayer = getHumanPlayer();
   creditsElement.textContent = gameState.credits;
   unitCountElement.textContent = gameState.team.filter(Boolean).length;
   shopTierElement.textContent = String(gameState.shopTier).padStart(2, "0");
+  playerHealthElement.textContent = humanPlayer.hp;
+  roundValueElement.textContent = String(gameState.round).padStart(2, "0");
 
   shopHeroes.forEach((hero) => {
     const isAvailable = hero.card.dataset.status === "available";
@@ -155,6 +478,7 @@ function updateHud() {
   upgradeShopHintElement.textContent = isMaxTier
     ? "Maximum shop tier reached"
     : `Unlock tier ${gameState.shopTier + 1} heroes`;
+  renderReadyButton();
 }
 
 function setShopCardHero(card, catalogHero) {
@@ -240,6 +564,7 @@ function rerollShop() {
   ]);
   const newHeroes = shuffledHeroes(excludedIds, refreshableCards.length);
 
+  markHumanNotReady();
   gameState.credits -= 1;
   refreshableCards.forEach((card, index) => setShopCardHero(card, newHeroes[index]));
   updateHud();
@@ -267,6 +592,7 @@ function upgradeShopTier() {
     return;
   }
 
+  markHumanNotReady();
   gameState.credits -= upgradeCost;
   gameState.shopTier += 1;
   updateHud();
@@ -279,22 +605,321 @@ function formatBuildTime(seconds) {
   return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 }
 
+function combatHeroMarkup(hero, index) {
+  return `
+    <figure class="combat-unit" data-combat-index="${index}" style="--unit-delay: ${index * 90}ms">
+      <img src="${hero.image}" alt="${hero.name}">
+      <span class="combat-unit__health" aria-hidden="true"><i style="width: 100%"></i></span>
+      <figcaption><strong>${hero.name}</strong><span>✦ ${hero.power} · ♥ ${hero.health}</span></figcaption>
+    </figure>
+  `;
+}
+
+function renderCombatTeam(container, team) {
+  const deployedHeroes = team.filter(Boolean);
+  container.innerHTML = deployedHeroes.length
+    ? deployedHeroes.map(combatHeroMarkup).join("")
+    : "<div class=\"combat-team__empty\">No heroes deployed</div>";
+}
+
+function simulateBattle(firstPlayer, secondPlayer) {
+  const firstSquad = firstPlayer.team.filter(Boolean).map((hero) => ({ ...hero, currentHealth: hero.health }));
+  const secondSquad = secondPlayer.team.filter(Boolean).map((hero) => ({ ...hero, currentHealth: hero.health }));
+  const events = [];
+
+  if (!firstSquad.length && !secondSquad.length) {
+    const firstWins = Math.random() >= 0.5;
+    return {
+      winner: firstWins ? firstPlayer : secondPlayer,
+      loser: firstWins ? secondPlayer : firstPlayer,
+      survivors: 0,
+      events,
+    };
+  }
+
+  if (!firstSquad.length || !secondSquad.length) {
+    return {
+      winner: firstSquad.length ? firstPlayer : secondPlayer,
+      loser: firstSquad.length ? secondPlayer : firstPlayer,
+      survivors: Math.max(firstSquad.length, secondSquad.length),
+      events,
+    };
+  }
+
+  let firstFront = 0;
+  let secondFront = 0;
+  let firstAttacks = Math.random() >= 0.5;
+  let turns = 0;
+
+  while (firstFront < firstSquad.length && secondFront < secondSquad.length && turns < 180) {
+    const attacker = firstAttacks ? firstSquad[firstFront] : secondSquad[secondFront];
+    const defender = firstAttacks ? secondSquad[secondFront] : firstSquad[firstFront];
+    const criticalBonus = Math.random() < 0.14 ? 3 : 0;
+    const damage = Math.max(
+      1,
+      attacker.power + criticalBonus + Math.floor(Math.random() * 3) - Math.floor(defender.health / 6),
+    );
+    defender.currentHealth -= damage;
+    const defenderDefeated = defender.currentHealth <= 0;
+
+    if (events.length < 48) {
+      events.push({
+        attackerSide: firstAttacks ? "first" : "second",
+        attackerIndex: firstAttacks ? firstFront : secondFront,
+        attackerName: attacker.name,
+        defenderSide: firstAttacks ? "second" : "first",
+        defenderIndex: firstAttacks ? secondFront : firstFront,
+        defenderName: defender.name,
+        damage,
+        remainingHealth: Math.max(0, defender.currentHealth),
+        maxHealth: defender.health,
+        defeated: defenderDefeated,
+        critical: criticalBonus > 0,
+      });
+    }
+
+    if (defenderDefeated) {
+      if (firstAttacks) {
+        secondFront += 1;
+      } else {
+        firstFront += 1;
+      }
+    }
+
+    firstAttacks = !firstAttacks;
+    turns += 1;
+  }
+
+  const firstWon = secondFront >= secondSquad.length;
+  const winningSquad = firstWon ? firstSquad : secondSquad;
+
+  return {
+    winner: firstWon ? firstPlayer : secondPlayer,
+    loser: firstWon ? secondPlayer : firstPlayer,
+    survivors: winningSquad.filter((hero) => hero.currentHealth > 0).length,
+    events,
+  };
+}
+
+function calculateCombatDamage(survivors) {
+  return Math.min(35, 8 + (gameState.round * 2) + (survivors * 3));
+}
+
+function getCombatUnit(side, unitIndex) {
+  const teamContainer = side === "first" ? playerCombatTeam : enemyCombatTeam;
+  return teamContainer.querySelector(`[data-combat-index="${unitIndex}"]`);
+}
+
+function playCombatEvents(result, eventIndex = 0) {
+  if (gameState.phase !== "combat") {
+    return;
+  }
+
+  const combatEvent = result?.events[eventIndex];
+
+  if (!combatEvent) {
+    combatFeed.textContent = "Final strike confirmed. Calculating battle damage…";
+    combatPhaseTimeout = window.setTimeout(resolveCombatPhase, 850);
+    return;
+  }
+
+  combatArena.querySelectorAll(".combat-unit--attacking, .combat-unit--hit").forEach((unit) => {
+    unit.classList.remove("combat-unit--attacking", "combat-unit--hit");
+  });
+
+  const attackerUnit = getCombatUnit(combatEvent.attackerSide, combatEvent.attackerIndex);
+  const defenderUnit = getCombatUnit(combatEvent.defenderSide, combatEvent.defenderIndex);
+  const defenderHealth = defenderUnit?.querySelector(".combat-unit__health i");
+  const healthPercent = (combatEvent.remainingHealth / combatEvent.maxHealth) * 100;
+
+  attackerUnit?.classList.add("combat-unit--attacking");
+  defenderUnit?.classList.add("combat-unit--hit");
+
+  if (defenderHealth) {
+    defenderHealth.style.width = `${Math.max(0, healthPercent)}%`;
+  }
+
+  if (combatEvent.defeated) {
+    defenderUnit?.classList.add("combat-unit--defeated");
+  }
+
+  combatFeed.innerHTML = combatEvent.defeated
+    ? `<strong>KO!</strong> ${combatEvent.attackerName} eliminated ${combatEvent.defenderName}.`
+    : `<strong>${combatEvent.critical ? "Critical hit!" : "Attack"}</strong> ${combatEvent.attackerName} dealt ${combatEvent.damage} damage to ${combatEvent.defenderName}.`;
+  combatPhaseTimeout = window.setTimeout(
+    () => playCombatEvents(result, eventIndex + 1),
+    COMBAT_EVENT_DURATION,
+  );
+}
+
+function startCombatPhase() {
+  if (gameState.phase !== "build-complete") {
+    return;
+  }
+
+  gameState.phase = "combat";
+  document.body.classList.add("combat-phase", "combat-resolving");
+  document.body.classList.remove("combat-resolved");
+  teamBoard.hidden = true;
+  combatArena.hidden = false;
+  teamKickerElement.innerHTML = "<span>Combat Zone</span> // Round Engagement";
+  teamTitleElement.textContent = "Autobattle In Progress";
+  buildTimerChip.querySelector("small").textContent = "Combat";
+  buildTimerElement.textContent = "FIGHT";
+  matchPhaseLabel.textContent = "Combat phase";
+
+  const pairing = getHumanPairing();
+  const opponent = pairing?.find((player) => !player.isHuman);
+  enemyCombatName.textContent = opponent?.name || "No Opponent";
+  renderCombatTeam(playerCombatTeam, getHumanPlayer().team);
+  renderCombatTeam(enemyCombatTeam, opponent?.team || []);
+  combatFeed.textContent = opponent
+    ? `Round ${gameState.round}: your squad is engaging ${opponent.name}.`
+    : "No valid opponent detected.";
+  renderLeaderboard();
+  announce("Combat phase started. All battles are resolving automatically.");
+
+  gameState.combatResults = gameState.pairings.map(([firstPlayer, secondPlayer]) => {
+    const result = simulateBattle(firstPlayer, secondPlayer);
+    return { ...result, damage: calculateCombatDamage(result.survivors) };
+  });
+  const humanResult = gameState.combatResults.find(
+    (result) => result.winner.isHuman || result.loser.isHuman,
+  );
+  combatPhaseTimeout = window.setTimeout(() => playCombatEvents(humanResult), 700);
+}
+
+function resolveCombatPhase() {
+  if (gameState.phase !== "combat") {
+    return;
+  }
+
+  gameState.combatResults.forEach((result) => {
+    if (!result.loser.isGhost) {
+      result.loser.hp = Math.max(0, result.loser.hp - result.damage);
+      result.loser.eliminated = result.loser.hp === 0;
+      result.loser.buildStatus = result.loser.eliminated ? "Eliminated" : `Lost ${result.damage} HP`;
+    }
+
+    if (!result.winner.isGhost) {
+      result.winner.buildStatus = "Battle won";
+    }
+  });
+
+  const humanPlayer = getHumanPlayer();
+  const humanResult = gameState.combatResults.find(
+    (result) => result.winner.isHuman || result.loser.isHuman,
+  );
+  const playerWon = humanResult?.winner.isHuman;
+  const opponent = playerWon ? humanResult?.loser : humanResult?.winner;
+
+  document.body.classList.remove("combat-resolving");
+  document.body.classList.add("combat-resolved", playerWon ? "combat-victory" : "combat-defeat");
+  combatFeed.innerHTML = playerWon
+    ? `<strong>Victory!</strong> ${opponent?.name || "The enemy"} was defeated. You lose no HP.`
+    : `<strong>Defeat.</strong> ${opponent?.name || "The enemy"} dealt ${humanResult?.damage || 0} damage. ${humanPlayer.hp} HP remains.`;
+  updateHud();
+  renderLeaderboard();
+  renderThreatPreview();
+  announce(playerWon ? "Battle won. You lose no health." : `Battle lost. ${humanResult?.damage || 0} health lost.`);
+
+  nextRoundTimeout = window.setTimeout(completeCombatRound, COMBAT_RESULT_DURATION);
+}
+
+function showMatchResultScreen(isVictory, winnerName = "") {
+  gameState.phase = "game-over";
+  gameState.buildPhaseActive = false;
+  clearAiBuildTimers();
+  window.clearInterval(buildTimerInterval);
+  window.clearTimeout(combatPhaseTimeout);
+  window.clearTimeout(nextRoundTimeout);
+  window.clearTimeout(readyLaunchTimeout);
+  document.body.classList.add("modal-open", "match-over");
+  document.body.classList.toggle("match-defeat", !isVictory);
+  matchResult.hidden = false;
+  matchResultKicker.textContent = isVictory ? "Match Complete" : "Squad Eliminated";
+  matchResultTitle.textContent = isVictory ? "Victory" : "Defeat";
+  matchResultDescription.textContent = isVictory
+    ? "You are the last commander standing."
+    : `${winnerName || "Another commander"} remains in the fight. Your integrity reached zero.`;
+  announce(isVictory ? "Match victory." : "You have been eliminated from the match.");
+}
+
+function completeCombatRound() {
+  if (gameState.phase !== "combat") {
+    return;
+  }
+
+  const humanPlayer = getHumanPlayer();
+  const alivePlayers = getAlivePlayers();
+
+  if (humanPlayer.eliminated) {
+    const leadingOpponent = alivePlayers.sort((first, second) => second.hp - first.hp)[0];
+    showMatchResultScreen(false, leadingOpponent?.name);
+    return;
+  }
+
+  if (alivePlayers.length === 1) {
+    showMatchResultScreen(alivePlayers[0].isHuman, alivePlayers[0].name);
+    return;
+  }
+
+  gameState.round += 1;
+  gameState.credits += 8 + Math.min(4, gameState.round);
+  gameState.phase = "build";
+  gameState.buildPhaseActive = true;
+  gameState.selectedShopId = null;
+  document.body.classList.remove(
+    "build-phase-ended",
+    "combat-phase",
+    "combat-resolving",
+    "combat-resolved",
+    "combat-victory",
+    "combat-defeat",
+  );
+  combatArena.hidden = true;
+  teamBoard.hidden = false;
+  teamKickerElement.innerHTML = "<span>Squad Deployment</span> // Your Side";
+  teamTitleElement.textContent = "Assemble Your Strike Team";
+  buildTimerChip.querySelector("small").textContent = "Build Time";
+  matchPhaseLabel.textContent = "Planning phase";
+  players.filter((player) => !player.eliminated).forEach((player) => {
+    player.ready = false;
+
+    if (!player.isHuman) {
+      player.buildStatus = "Preparing";
+    }
+  });
+  initializeRandomShop();
+  renderTeam();
+  startBuildTimer();
+  announce(`Round ${gameState.round} build phase started. New credits received.`);
+}
+
 function finishBuildPhase() {
-  if (!gameState.buildPhaseActive) {
+  if (!gameState.buildPhaseActive || gameState.phase !== "build") {
     return;
   }
 
   gameState.buildPhaseActive = false;
+  gameState.phase = "build-complete";
+  window.clearTimeout(readyLaunchTimeout);
+  readyLaunchTimeout = null;
   gameState.selectedShopId = null;
   window.clearInterval(buildTimerInterval);
   buildTimerInterval = null;
   buildTimerElement.textContent = "00:00";
+  buildTimerRing.style.setProperty("--clock-second-angle", "360deg");
+  buildTimerRing.style.setProperty("--clock-minute-angle", "150deg");
+  buildTimerRing.style.setProperty("--clock-ring-progress", "360deg");
   buildTimerChip.classList.remove("timer-warning");
   buildTimerChip.classList.add("timer-ended");
   document.body.classList.add("build-phase-ended");
   shopCards.forEach((card) => card.classList.remove("shop-card--selected"));
+  completeAiBuilds();
   updateHud();
-  announce("Build phase complete. The shop is now locked.");
+  announce("Build phase complete. Teams are entering combat.");
+  combatPhaseTimeout = window.setTimeout(startCombatPhase, 700);
 }
 
 function updateBuildTimer() {
@@ -319,7 +944,16 @@ function updateBuildTimer() {
 }
 
 function startBuildTimer() {
+  window.clearInterval(buildTimerInterval);
+  buildTimerChip.classList.remove("timer-warning", "timer-ended");
+  buildTimerRing.style.setProperty("--clock-second-angle", "0deg");
+  buildTimerRing.style.setProperty("--clock-minute-angle", "120deg");
+  buildTimerRing.style.setProperty("--clock-ring-progress", "0deg");
   gameState.buildEndsAt = Date.now() + BUILD_PHASE_DURATION;
+  prepareRoundPairings();
+  scheduleAiBuilds();
+  updateHud();
+  checkAllPlayersReady();
   updateBuildTimer();
   buildTimerInterval = window.setInterval(updateBuildTimer, 250);
 }
@@ -372,6 +1006,7 @@ function purchaseHero(heroId) {
     return;
   }
 
+  markHumanNotReady();
   gameState.credits -= hero.cost;
   hero.card.dataset.status = "purchased";
   hero.card.draggable = false;
@@ -402,14 +1037,20 @@ function emptySlotMarkup(slotIndex) {
   `;
 }
 
+function heroSellValue(hero) {
+  return Math.max(1, Math.ceil(hero.cost / 2));
+}
+
 function deployedHeroMarkup(hero, slotIndex) {
   const slotNumber = String(slotIndex + 1).padStart(2, "0");
+  const sellValue = heroSellValue(hero);
 
   return `
     <div class="hero-card hero-card--${hero.universe}" draggable="true" data-team-slot="${slotIndex}" tabindex="0" role="button" aria-label="${hero.name} in team slot ${slotIndex + 1}. Drag to move.">
       <span class="hero-card__slot">${slotNumber}</span>
       <img src="${hero.image}" alt="${hero.name}">
       <img class="universe-badge" src="${hero.logo}" alt="">
+      <button class="hero-card__sell" type="button" data-sell-slot="${slotIndex}" aria-label="Sell ${hero.name} for ${sellValue} credits">Sell <strong>+◆ ${sellValue}</strong></button>
       <span class="level-badge">LV 1</span>
       <div class="hero-stats" aria-label="Power ${hero.power}, health ${hero.health}">
         <span><i class="power-icon">&#10022;</i> ${hero.power}</span>
@@ -446,6 +1087,7 @@ function deployPurchasedHero(heroId, slotIndex) {
     return false;
   }
 
+  markHumanNotReady();
   gameState.team[slotIndex] = hero;
   gameState.selectedShopId = null;
   hero.card.dataset.status = "deployed";
@@ -467,11 +1109,63 @@ function moveTeamHero(fromIndex, toIndex) {
 
   const movingHero = gameState.team[fromIndex];
   const destinationHero = gameState.team[toIndex];
+  markHumanNotReady();
   gameState.team[toIndex] = movingHero;
   gameState.team[fromIndex] = destinationHero;
   renderTeam();
   announce(`${movingHero.name} moved to team slot ${toIndex + 1}.`);
 }
+
+function sellTeamHero(slotIndex) {
+  if (!gameState.buildPhaseActive || gameState.phase !== "build") {
+    announce("Heroes can only be sold during the build phase.");
+    return;
+  }
+
+  const hero = gameState.team[slotIndex];
+
+  if (!hero) {
+    return;
+  }
+
+  markHumanNotReady();
+  const sellValue = heroSellValue(hero);
+  gameState.credits += sellValue;
+  gameState.team[slotIndex] = null;
+
+  if (hero.card?.dataset.heroId === hero.catalogId && hero.card.dataset.status === "deployed") {
+    const excludedIds = new Set([
+      ...gameState.team.filter(Boolean).map((teamHero) => teamHero.catalogId),
+      ...[...shopHeroes.values()].map((shopHero) => shopHero.catalogId),
+    ]);
+    const [replacementHero] = shuffledHeroes(excludedIds, 1);
+
+    if (replacementHero) {
+      setShopCardHero(hero.card, replacementHero);
+    }
+  }
+
+  renderTeam();
+  announce(`${hero.name} sold for ${sellValue} credits. A replacement offer is available.`);
+}
+
+teamBoard.addEventListener("pointerdown", (event) => {
+  if (event.target.closest(".hero-card__sell")) {
+    event.stopPropagation();
+  }
+});
+
+teamBoard.addEventListener("click", (event) => {
+  const sellButton = event.target.closest(".hero-card__sell[data-sell-slot]");
+
+  if (!sellButton) {
+    return;
+  }
+
+  event.preventDefault();
+  event.stopPropagation();
+  sellTeamHero(Number(sellButton.dataset.sellSlot));
+});
 
 shopCards.forEach((card) => {
   const heroId = card.dataset.shopId;
@@ -626,6 +1320,11 @@ shopCards.forEach((card) => {
 teamBoard.addEventListener("dragstart", (event) => {
   const heroCard = event.target.closest(".hero-card[data-team-slot]");
 
+  if (event.target.closest(".hero-card__sell")) {
+    event.preventDefault();
+    return;
+  }
+
   if (!gameState.buildPhaseActive || !heroCard) {
     return;
   }
@@ -696,6 +1395,7 @@ teamSlots.forEach((slot) => {
 
 rerollButton.addEventListener("click", rerollShop);
 upgradeShopButton.addEventListener("click", upgradeShopTier);
+readyButton.addEventListener("click", toggleHumanReady);
 brandExit.addEventListener("click", (event) => {
   event.preventDefault();
   openLeaveGameModal(brandExit);
