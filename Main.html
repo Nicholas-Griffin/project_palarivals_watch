@@ -9,30 +9,105 @@
   <meta name="description" content="Main menu for PalaRivals Watch.">
 </head>
 
-<body>
+<body data-theme="default" data-mode="dark">
+  <div class="theme-world" aria-hidden="true">
+    <span class="theme-world__grid"></span>
+    <span class="theme-world__flare"></span>
+    <span class="theme-world__mark theme-world__mark--one"></span>
+    <span class="theme-world__mark theme-world__mark--two"></span>
+  </div>
+
   <section id="AccountButtonSection" aria-label="Account options">
+    <button class="AccountButtons ModeToggle" id="ColorModeButton" type="button" aria-pressed="false" aria-label="Switch to light mode">
+      <span class="ModeToggle__icon" id="ColorModeIcon" aria-hidden="true">&#9788;</span>
+      <span id="ColorModeLabel">Light</span>
+    </button>
     <button class="AccountButtons" id="SignupButton" type="button">Sign Up</button>
     <button class="AccountButtons" id="LoginButton" type="button">Log In</button>
     <button class="AccountButtons hidden" id="AccountButton" type="button">Account</button>
   </section>
 
-  <main>
-    <header>
-      <p class="eyebrow">Three worlds. One arena.</p>
-      <h1 id="MainMenuTitle">PalaRivals <span>Watch</span></h1>
-      <p class="menu-copy">Build your squad. Outplay the lobby. Be the last team standing.</p>
-    </header>
+  <main class="menu-shell">
+    <section class="menu-panel" aria-labelledby="MainMenuTitle">
+      <div class="menu-panel__status" aria-hidden="true">
+        <span id="ThemeCode">MR-01</span>
+        <span class="menu-panel__status-line"></span>
+        <span id="ThemeStatus">RIVALS NETWORK</span>
+      </div>
 
-    <section id="MainButtonSection" aria-label="Main menu">
-      <a class="MainButtons MainButtons--primary" id="PlayButton" href="GameLobby.html">Enter Lobby</a>
-      <button class="MainButtons" id="HeroCompendiumButton" type="button">Hero Compendium</button>
+      <div class="overwatch-command" aria-hidden="true">
+        <span class="overwatch-command__insignia">
+          <img src="Img/Icons/OverwatchLogo.png" alt="">
+        </span>
+        <span class="overwatch-command__copy">
+          <strong>Overwatch Command</strong>
+          <small>Watchpoint network // Recall active</small>
+        </span>
+        <span class="overwatch-command__online">Online</span>
+      </div>
+
+      <header>
+        <p class="eyebrow" id="ThemeEyebrow">Three worlds. One arena.</p>
+        <h1 id="MainMenuTitle">
+          <span class="title-main">PalaRivals</span>
+          <span class="title-accent">Watch</span>
+        </h1>
+        <p class="menu-copy" id="ThemeCopy">Build your squad. Outplay the lobby. Be the last team standing.</p>
+      </header>
+
+      <section id="MainButtonSection" aria-label="Main menu">
+        <a class="MainButtons MainButtons--primary" id="PlayButton" href="GameLobby.html">
+          <span>Enter Lobby</span>
+          <span class="button-arrow" aria-hidden="true">&#10140;</span>
+        </a>
+        <button class="MainButtons" id="HeroCompendiumButton" type="button">Hero Compendium</button>
+      </section>
+
+      <section id="ThemeChangeSection" aria-labelledby="ThemeSwitchLabel">
+        <p id="ThemeSwitchLabel"><span>Choose your universe</span></p>
+        <div class="theme-switches">
+          <button class="ThemeSwitch" type="button" data-theme-switch="marvel" aria-label="Use Marvel Rivals theme" aria-pressed="false">
+            <span class="ThemeSwitch__icon"><img src="Img/Icons/MarvelRivalsLogo.png" alt=""></span>
+            <span class="ThemeSwitch__name">Marvel Rivals</span>
+          </button>
+          <button class="ThemeSwitch" type="button" data-theme-switch="paladins" aria-label="Use Paladins theme" aria-pressed="false">
+            <span class="ThemeSwitch__icon"><img src="Img/Icons/PaladinsLogo.png" alt=""></span>
+            <span class="ThemeSwitch__name">Paladins</span>
+          </button>
+          <button class="ThemeSwitch" type="button" data-theme-switch="overwatch" aria-label="Use Overwatch theme" aria-pressed="false">
+            <span class="ThemeSwitch__icon"><img src="Img/Icons/OverwatchLogo.png" alt=""></span>
+            <span class="ThemeSwitch__name">Overwatch</span>
+          </button>
+        </div>
+      </section>
+
+      <div class="default-menu-meta" aria-hidden="true">
+        <span>Draft your squad</span>
+        <i></i>
+        <span>Adapt your formation</span>
+        <i></i>
+        <span>Outlast the arena</span>
+      </div>
     </section>
 
-    <section id="ThemeChangeSection" aria-label="Game universes">
-      <img src="Img/Icons/MarvelRivalsLogo.png" alt="Marvel Rivals">
-      <img src="Img/Icons/PaladinsLogo.png" alt="Paladins">
-      <img src="Img/Icons/OverwatchLogo.png" alt="Overwatch">
-    </section>
+    <aside class="theme-showcase" aria-hidden="true">
+      <div class="showcase-orbit"></div>
+      <div class="overwatch-hud">
+        <span class="overwatch-hud__eyebrow">Agent roster // Strike team 01</span>
+        <strong>Heroes on call</strong>
+        <span class="overwatch-hud__readout">02 / 02</span>
+      </div>
+      <div class="showcase-frame showcase-frame--back">
+        <img id="ThemeHeroSecondary" src="Img/Characters/MarvelRivals/ThorPNG.jpeg" alt="">
+      </div>
+      <div class="showcase-frame showcase-frame--front">
+        <img id="ThemeHeroPrimary" src="Img/Characters/MarvelRivals/IronManPNG.jpeg" alt="">
+      </div>
+      <div class="showcase-copy">
+        <span id="ThemeUniverse">Marvel Rivals</span>
+        <strong id="ThemeCallout">Rivals Assemble</strong>
+      </div>
+    </aside>
   </main>
 
   <footer>
