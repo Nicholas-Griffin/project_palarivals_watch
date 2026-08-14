@@ -7,30 +7,50 @@ const teamBoard = document.querySelector("#teamBoard");
 const teamSlots = [...document.querySelectorAll(".team-slot")];
 const shopCards = [...document.querySelectorAll(".shop-card")];
 const rerollButton = document.querySelector("#rerollShop");
+const upgradeShopButton = document.querySelector("#upgradeShop");
+const upgradeShopCostElement = document.querySelector("#upgradeShopCost");
+const upgradeShopHintElement = document.querySelector("#upgradeShopHint");
+const shopTierElement = document.querySelector("#shopTierValue");
+const buildTimerElement = document.querySelector("#buildTimer");
+const buildTimerChip = buildTimerElement.closest(".hud-chip");
+const buildTimerRing = buildTimerChip.querySelector(".timer-ring");
+const brandExit = document.querySelector("#brandExit");
+const leaveGameButton = document.querySelector("#leaveGameButton");
+const leaveGameModal = document.querySelector("#leaveGameModal");
+const stayInGameButton = document.querySelector("#stayInGameButton");
+const closeLeaveModalButtons = [...document.querySelectorAll("[data-close-leave-modal]")];
 
 const gameState = {
   credits: Number(creditsElement.textContent),
+  shopTier: 1,
+  buildPhaseActive: true,
+  buildEndsAt: null,
   selectedShopId: null,
   team: Array(6).fill(null),
   drag: null,
 };
 
+const MAX_SHOP_TIER = 4;
+const SHOP_UPGRADE_COSTS = { 1: 4, 2: 6, 3: 8 };
+const BUILD_PHASE_DURATION = 60_000;
+let buildTimerInterval = null;
+
 const heroCatalog = [
-  { id: "groot", name: "Groot", universe: "marvel", image: "Img/Characters/MarvelRivals/GrootPNG.jpeg", logo: "Img/Icons/MarvelRivalsLogo.png", power: 5, health: 10, cost: 3 },
-  { id: "hulk", name: "Hulk", universe: "marvel", image: "Img/Characters/MarvelRivals/HulkPNG.jpeg", logo: "Img/Icons/MarvelRivalsLogo.png", power: 10, health: 12, cost: 5 },
-  { id: "iron-man", name: "Iron Man", universe: "marvel", image: "Img/Characters/MarvelRivals/IronManPNG.jpeg", logo: "Img/Icons/MarvelRivalsLogo.png", power: 8, health: 6, cost: 4 },
-  { id: "spider-man", name: "Spider-Man", universe: "marvel", image: "Img/Characters/MarvelRivals/SpiderManPNG.jpeg", logo: "Img/Icons/MarvelRivalsLogo.png", power: 7, health: 5, cost: 3 },
-  { id: "thor", name: "Thor", universe: "marvel", image: "Img/Characters/MarvelRivals/ThorPNG.jpeg", logo: "Img/Icons/MarvelRivalsLogo.png", power: 9, health: 9, cost: 4 },
-  { id: "bastion", name: "Bastion", universe: "overwatch", image: "Img/Characters/Overwatch/BastionPNG.png", logo: "Img/Icons/OverwatchLogo.png", power: 8, health: 7, cost: 3 },
-  { id: "genji", name: "Genji", universe: "overwatch", image: "Img/Characters/Overwatch/GenjiPNG.png", logo: "Img/Icons/OverwatchLogo.png", power: 6, health: 5, cost: 3 },
-  { id: "junkrat", name: "Junkrat", universe: "overwatch", image: "Img/Characters/Overwatch/JunkratPNG.png", logo: "Img/Icons/OverwatchLogo.png", power: 7, health: 4, cost: 2 },
-  { id: "roadhog", name: "Roadhog", universe: "overwatch", image: "Img/Characters/Overwatch/Roadhog.png", logo: "Img/Icons/OverwatchLogo.png", power: 8, health: 12, cost: 4 },
-  { id: "tracer", name: "Tracer", universe: "overwatch", image: "Img/Characters/Overwatch/TracerPNG.png", logo: "Img/Icons/OverwatchLogo.png", power: 5, health: 4, cost: 2 },
-  { id: "bomb-king", name: "Bomb King", universe: "paladins", image: "Img/Characters/Paladins/BombKingPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 8, health: 6, cost: 3 },
-  { id: "drogoz", name: "Drogoz", universe: "paladins", image: "Img/Characters/Paladins/DrogozPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 8, health: 6, cost: 3 },
-  { id: "moji", name: "Moji", universe: "paladins", image: "Img/Characters/Paladins/MojiPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 5, health: 6, cost: 2 },
-  { id: "raum", name: "Raum", universe: "paladins", image: "Img/Characters/Paladins/RaumPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 7, health: 12, cost: 4 },
-  { id: "seris", name: "Seris", universe: "paladins", image: "Img/Characters/Paladins/SerisPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 4, health: 8, cost: 3 },
+  { id: "groot", name: "Groot", universe: "marvel", image: "Img/Characters/MarvelRivals/GrootPNG.jpeg", logo: "Img/Icons/MarvelRivalsLogo.png", power: 5, health: 10, cost: 3, tier: 1 },
+  { id: "hulk", name: "Hulk", universe: "marvel", image: "Img/Characters/MarvelRivals/HulkPNG.jpeg", logo: "Img/Icons/MarvelRivalsLogo.png", power: 10, health: 12, cost: 5, tier: 4 },
+  { id: "iron-man", name: "Iron Man", universe: "marvel", image: "Img/Characters/MarvelRivals/IronManPNG.jpeg", logo: "Img/Icons/MarvelRivalsLogo.png", power: 8, health: 6, cost: 4, tier: 2 },
+  { id: "spider-man", name: "Spider-Man", universe: "marvel", image: "Img/Characters/MarvelRivals/SpiderManPNG.jpeg", logo: "Img/Icons/MarvelRivalsLogo.png", power: 7, health: 5, cost: 3, tier: 1 },
+  { id: "thor", name: "Thor", universe: "marvel", image: "Img/Characters/MarvelRivals/ThorPNG.jpeg", logo: "Img/Icons/MarvelRivalsLogo.png", power: 9, health: 9, cost: 4, tier: 3 },
+  { id: "bastion", name: "Bastion", universe: "overwatch", image: "Img/Characters/Overwatch/BastionPNG.png", logo: "Img/Icons/OverwatchLogo.png", power: 8, health: 7, cost: 3, tier: 1 },
+  { id: "genji", name: "Genji", universe: "overwatch", image: "Img/Characters/Overwatch/GenjiPNG.png", logo: "Img/Icons/OverwatchLogo.png", power: 6, health: 5, cost: 3, tier: 2 },
+  { id: "junkrat", name: "Junkrat", universe: "overwatch", image: "Img/Characters/Overwatch/JunkratPNG.png", logo: "Img/Icons/OverwatchLogo.png", power: 7, health: 4, cost: 2, tier: 1 },
+  { id: "roadhog", name: "Roadhog", universe: "overwatch", image: "Img/Characters/Overwatch/Roadhog.png", logo: "Img/Icons/OverwatchLogo.png", power: 8, health: 12, cost: 4, tier: 3 },
+  { id: "tracer", name: "Tracer", universe: "overwatch", image: "Img/Characters/Overwatch/TracerPNG.png", logo: "Img/Icons/OverwatchLogo.png", power: 5, health: 4, cost: 2, tier: 1 },
+  { id: "bomb-king", name: "Bomb King", universe: "paladins", image: "Img/Characters/Paladins/BombKingPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 8, health: 6, cost: 3, tier: 2 },
+  { id: "drogoz", name: "Drogoz", universe: "paladins", image: "Img/Characters/Paladins/DrogozPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 8, health: 6, cost: 3, tier: 2 },
+  { id: "moji", name: "Moji", universe: "paladins", image: "Img/Characters/Paladins/MojiPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 5, health: 6, cost: 2, tier: 1 },
+  { id: "raum", name: "Raum", universe: "paladins", image: "Img/Characters/Paladins/RaumPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 7, health: 12, cost: 4, tier: 3 },
+  { id: "seris", name: "Seris", universe: "paladins", image: "Img/Characters/Paladins/SerisPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 4, health: 8, cost: 3, tier: 2 },
 ];
 
 const shopHeroes = new Map(
@@ -52,6 +72,7 @@ const shopHeroes = new Map(
 );
 
 let pointerDrag = null;
+let exitTrigger = null;
 
 function announce(message) {
   gameStatusElement.textContent = "";
@@ -60,19 +81,80 @@ function announce(message) {
   });
 }
 
+function openLeaveGameModal(trigger) {
+  exitTrigger = trigger;
+  leaveGameModal.hidden = false;
+  document.body.classList.add("modal-open");
+  stayInGameButton.focus();
+  announce("Leave game confirmation opened.");
+}
+
+function closeLeaveGameModal() {
+  leaveGameModal.hidden = true;
+  document.body.classList.remove("modal-open");
+  exitTrigger?.focus();
+  exitTrigger = null;
+  announce("Leave game cancelled.");
+}
+
+function handleModalKeyboard(event) {
+  if (leaveGameModal.hidden) {
+    return;
+  }
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeLeaveGameModal();
+    return;
+  }
+
+  if (event.key !== "Tab") {
+    return;
+  }
+
+  const focusableElements = [...leaveGameModal.querySelectorAll("button, a[href]")];
+  const firstElement = focusableElements[0];
+  const lastElement = focusableElements[focusableElements.length - 1];
+
+  if (event.shiftKey && document.activeElement === firstElement) {
+    event.preventDefault();
+    lastElement.focus();
+  } else if (!event.shiftKey && document.activeElement === lastElement) {
+    event.preventDefault();
+    firstElement.focus();
+  }
+}
+
 function updateHud() {
   creditsElement.textContent = gameState.credits;
   unitCountElement.textContent = gameState.team.filter(Boolean).length;
+  shopTierElement.textContent = String(gameState.shopTier).padStart(2, "0");
 
   shopHeroes.forEach((hero) => {
     const isAvailable = hero.card.dataset.status === "available";
     const cannotAfford = isAvailable && hero.cost > gameState.credits;
     hero.card.classList.toggle("shop-card--locked", cannotAfford);
-    hero.card.querySelector(".shop-card__buy").setAttribute("aria-disabled", String(cannotAfford));
+    const buyButton = hero.card.querySelector(".shop-card__buy");
+    buyButton.disabled = !gameState.buildPhaseActive;
+    buyButton.setAttribute("aria-disabled", String(cannotAfford || !gameState.buildPhaseActive));
   });
 
-  rerollButton.disabled = gameState.credits < 1;
-  rerollButton.setAttribute("aria-disabled", String(gameState.credits < 1));
+  rerollButton.disabled = gameState.credits < 1 || !gameState.buildPhaseActive;
+  rerollButton.setAttribute("aria-disabled", String(rerollButton.disabled));
+
+  const isMaxTier = gameState.shopTier >= MAX_SHOP_TIER;
+  const upgradeCost = SHOP_UPGRADE_COSTS[gameState.shopTier];
+  const cannotAffordUpgrade = !isMaxTier && gameState.credits < upgradeCost;
+  upgradeShopButton.disabled = isMaxTier || !gameState.buildPhaseActive;
+  upgradeShopButton.classList.toggle("upgrade-button--locked", cannotAffordUpgrade);
+  upgradeShopButton.setAttribute(
+    "aria-disabled",
+    String(upgradeShopButton.disabled || cannotAffordUpgrade),
+  );
+  upgradeShopCostElement.textContent = isMaxTier ? "MAX" : `◆ ${upgradeCost}`;
+  upgradeShopHintElement.textContent = isMaxTier
+    ? "Maximum shop tier reached"
+    : `Unlock tier ${gameState.shopTier + 1} heroes`;
 }
 
 function setShopCardHero(card, catalogHero) {
@@ -88,13 +170,14 @@ function setShopCardHero(card, catalogHero) {
   card.dataset.power = catalogHero.power;
   card.dataset.health = catalogHero.health;
   card.dataset.cost = catalogHero.cost;
+  card.dataset.tier = catalogHero.tier;
   card.dataset.status = "available";
   card.draggable = false;
   card.removeAttribute("aria-pressed");
   delete card.dataset.suppressClick;
   card.setAttribute(
     "aria-label",
-    `${catalogHero.name}, cost ${catalogHero.cost} credits`,
+    `${catalogHero.name}, tier ${catalogHero.tier}, cost ${catalogHero.cost} credits`,
   );
 
   const heroImage = card.querySelector("img:not(.universe-badge)");
@@ -115,13 +198,14 @@ function setShopCardHero(card, catalogHero) {
 }
 
 function shuffledHeroes(excludedIds, amount) {
-  let candidates = heroCatalog.filter((hero) => !excludedIds.has(hero.id));
+  const unlockedHeroes = heroCatalog.filter((hero) => hero.tier <= gameState.shopTier);
+  let candidates = unlockedHeroes.filter((hero) => !excludedIds.has(hero.id));
 
   if (candidates.length < amount) {
     const protectedIds = new Set(
       gameState.team.filter(Boolean).map((hero) => hero.catalogId),
     );
-    candidates = heroCatalog.filter((hero) => !protectedIds.has(hero.id));
+    candidates = unlockedHeroes.filter((hero) => !protectedIds.has(hero.id));
   }
 
   for (let index = candidates.length - 1; index > 0; index -= 1) {
@@ -134,6 +218,11 @@ function shuffledHeroes(excludedIds, amount) {
 
 function rerollShop() {
   const refreshableCards = shopCards.filter((card) => card.dataset.status !== "purchased");
+
+  if (!gameState.buildPhaseActive) {
+    announce("The build phase has ended.");
+    return;
+  }
 
   if (gameState.credits < 1) {
     announce("You need 1 credit to reroll the shop.");
@@ -157,10 +246,93 @@ function rerollShop() {
   announce(`Shop rerolled for 1 credit. ${refreshableCards.length} new heroes available.`);
 }
 
+function upgradeShopTier() {
+  if (!gameState.buildPhaseActive) {
+    announce("The build phase has ended.");
+    return;
+  }
+
+  if (gameState.shopTier >= MAX_SHOP_TIER) {
+    announce("The shop is already at maximum tier.");
+    return;
+  }
+
+  const upgradeCost = SHOP_UPGRADE_COSTS[gameState.shopTier];
+
+  if (gameState.credits < upgradeCost) {
+    upgradeShopButton.classList.remove("upgrade-button--denied");
+    void upgradeShopButton.offsetWidth;
+    upgradeShopButton.classList.add("upgrade-button--denied");
+    announce(`You need ${upgradeCost} credits to upgrade the shop.`);
+    return;
+  }
+
+  gameState.credits -= upgradeCost;
+  gameState.shopTier += 1;
+  updateHud();
+  announce(`Shop upgraded to tier ${gameState.shopTier}. Stronger heroes can now appear on rerolls.`);
+}
+
+function formatBuildTime(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
+}
+
+function finishBuildPhase() {
+  if (!gameState.buildPhaseActive) {
+    return;
+  }
+
+  gameState.buildPhaseActive = false;
+  gameState.selectedShopId = null;
+  window.clearInterval(buildTimerInterval);
+  buildTimerInterval = null;
+  buildTimerElement.textContent = "00:00";
+  buildTimerChip.classList.remove("timer-warning");
+  buildTimerChip.classList.add("timer-ended");
+  document.body.classList.add("build-phase-ended");
+  shopCards.forEach((card) => card.classList.remove("shop-card--selected"));
+  updateHud();
+  announce("Build phase complete. The shop is now locked.");
+}
+
+function updateBuildTimer() {
+  const millisecondsRemaining = Math.max(0, gameState.buildEndsAt - Date.now());
+  const secondsRemaining = Math.max(
+    0,
+    Math.ceil(millisecondsRemaining / 1000),
+  );
+  const elapsedProgress = 1 - (millisecondsRemaining / BUILD_PHASE_DURATION);
+  const secondHandAngle = Math.min(360, elapsedProgress * 360);
+  const minuteHandAngle = 120 + (elapsedProgress * 30);
+
+  buildTimerElement.textContent = formatBuildTime(secondsRemaining);
+  buildTimerRing.style.setProperty("--clock-second-angle", `${secondHandAngle.toFixed(2)}deg`);
+  buildTimerRing.style.setProperty("--clock-minute-angle", `${minuteHandAngle.toFixed(2)}deg`);
+  buildTimerRing.style.setProperty("--clock-ring-progress", `${secondHandAngle.toFixed(2)}deg`);
+  buildTimerChip.classList.toggle("timer-warning", secondsRemaining <= 10 && secondsRemaining > 0);
+
+  if (secondsRemaining === 0) {
+    finishBuildPhase();
+  }
+}
+
+function startBuildTimer() {
+  gameState.buildEndsAt = Date.now() + BUILD_PHASE_DURATION;
+  updateBuildTimer();
+  buildTimerInterval = window.setInterval(updateBuildTimer, 250);
+}
+
+function initializeRandomShop() {
+  const startingHeroes = shuffledHeroes(new Set(), shopCards.length);
+  shopCards.forEach((card, index) => setShopCardHero(card, startingHeroes[index]));
+}
+
 function selectPurchasedHero(heroId) {
   const hero = shopHeroes.get(heroId);
 
-  if (!hero || hero.card.dataset.status !== "purchased") {
+  if (!gameState.buildPhaseActive || !hero || hero.card.dataset.status !== "purchased") {
     return;
   }
 
@@ -182,6 +354,11 @@ function selectPurchasedHero(heroId) {
 
 function purchaseHero(heroId) {
   const hero = shopHeroes.get(heroId);
+
+  if (!gameState.buildPhaseActive) {
+    announce("The build phase has ended.");
+    return;
+  }
 
   if (!hero || hero.card.dataset.status !== "available") {
     return;
@@ -265,7 +442,7 @@ function renderTeam() {
 function deployPurchasedHero(heroId, slotIndex) {
   const hero = shopHeroes.get(heroId);
 
-  if (!hero || hero.card.dataset.status !== "purchased" || gameState.team[slotIndex]) {
+  if (!gameState.buildPhaseActive || !hero || hero.card.dataset.status !== "purchased" || gameState.team[slotIndex]) {
     return false;
   }
 
@@ -284,7 +461,7 @@ function deployPurchasedHero(heroId, slotIndex) {
 }
 
 function moveTeamHero(fromIndex, toIndex) {
-  if (fromIndex === toIndex || !gameState.team[fromIndex]) {
+  if (!gameState.buildPhaseActive || fromIndex === toIndex || !gameState.team[fromIndex]) {
     return;
   }
 
@@ -335,7 +512,7 @@ shopCards.forEach((card) => {
   });
 
   card.addEventListener("dragstart", (event) => {
-    if (card.dataset.status !== "purchased") {
+    if (!gameState.buildPhaseActive || card.dataset.status !== "purchased") {
       event.preventDefault();
       return;
     }
@@ -353,7 +530,7 @@ shopCards.forEach((card) => {
   });
 
   card.addEventListener("pointerdown", (event) => {
-    if (card.dataset.status !== "purchased" || event.button !== 0) {
+    if (!gameState.buildPhaseActive || card.dataset.status !== "purchased" || event.button !== 0) {
       return;
     }
 
@@ -381,7 +558,7 @@ shopCards.forEach((card) => {
       event.clientY - pointerDrag.startY,
     );
 
-    if (!pointerDrag.ghost && distance > 7) {
+    if (!pointerDrag.ghost && distance > 3) {
       const ghost = card.cloneNode(true);
       ghost.removeAttribute("tabindex");
       ghost.removeAttribute("aria-label");
@@ -449,7 +626,7 @@ shopCards.forEach((card) => {
 teamBoard.addEventListener("dragstart", (event) => {
   const heroCard = event.target.closest(".hero-card[data-team-slot]");
 
-  if (!heroCard) {
+  if (!gameState.buildPhaseActive || !heroCard) {
     return;
   }
 
@@ -470,7 +647,7 @@ teamSlots.forEach((slot) => {
   const slotIndex = Number(slot.dataset.slotIndex);
 
   slot.addEventListener("dragover", (event) => {
-    if (!gameState.drag) {
+    if (!gameState.buildPhaseActive || !gameState.drag) {
       return;
     }
 
@@ -518,5 +695,16 @@ teamSlots.forEach((slot) => {
 });
 
 rerollButton.addEventListener("click", rerollShop);
+upgradeShopButton.addEventListener("click", upgradeShopTier);
+brandExit.addEventListener("click", (event) => {
+  event.preventDefault();
+  openLeaveGameModal(brandExit);
+});
+leaveGameButton.addEventListener("click", () => openLeaveGameModal(leaveGameButton));
+stayInGameButton.addEventListener("click", closeLeaveGameModal);
+closeLeaveModalButtons.forEach((button) => button.addEventListener("click", closeLeaveGameModal));
+document.addEventListener("keydown", handleModalKeyboard);
 
+initializeRandomShop();
 renderTeam();
+startBuildTimer();
