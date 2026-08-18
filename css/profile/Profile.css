@@ -1,0 +1,1103 @@
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,700;0,800;1,800;1,900&family=Rajdhani:wght@500;600;700&display=swap");
+
+:root {
+  color-scheme: dark;
+  font-family: "Rajdhani", "Arial Narrow", Arial, sans-serif;
+  --cyan: #5fe7ff;
+  --cyan-soft: rgba(95, 231, 255, 0.16);
+  --red: #ff4f71;
+  --orange: #ffad4d;
+  --violet: #9c6cff;
+  --green: #55efaa;
+  --ink: #f6f9ff;
+  --muted: #8393aa;
+  --panel: rgba(9, 18, 34, 0.88);
+  --panel-strong: rgba(10, 22, 41, 0.97);
+  --line: rgba(130, 174, 220, 0.18);
+  --page-width: 1380px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: #040914;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100svh;
+  overflow-x: hidden;
+  color: var(--ink);
+  background: #040914;
+}
+
+button,
+a {
+  font: inherit;
+}
+
+button {
+  color: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.profile-backdrop,
+.profile-backdrop > span {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.profile-backdrop {
+  z-index: -2;
+  overflow: hidden;
+  background:
+    linear-gradient(115deg, rgba(7, 19, 34, 0.98), rgba(4, 8, 19, 0.97) 52%, rgba(17, 9, 28, 0.97)),
+    #040914;
+}
+
+.profile-backdrop::before,
+.profile-backdrop::after {
+  position: absolute;
+  z-index: 1;
+  content: "";
+  transform: skewX(-17deg);
+}
+
+.profile-backdrop::before {
+  top: -18%;
+  right: 11%;
+  width: min(34vw, 540px);
+  height: 138%;
+  border-right: 1px solid rgba(156, 108, 255, 0.2);
+  border-left: 1px solid rgba(95, 231, 255, 0.12);
+  background: linear-gradient(180deg, rgba(95, 231, 255, 0.04), transparent 42%, rgba(156, 108, 255, 0.045));
+}
+
+.profile-backdrop::after {
+  right: -8%;
+  bottom: -45%;
+  width: 43vw;
+  height: 70vw;
+  border: 1px solid rgba(255, 79, 113, 0.12);
+  background: rgba(255, 79, 113, 0.018);
+  transform: rotate(32deg);
+}
+
+.profile-backdrop__grid {
+  opacity: 0.42;
+  background-image:
+    linear-gradient(rgba(88, 149, 197, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(88, 149, 197, 0.045) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(to bottom, black, transparent 86%);
+}
+
+.profile-backdrop__glow {
+  border-radius: 50%;
+  filter: blur(30px);
+  opacity: 0.23;
+}
+
+.profile-backdrop__glow--cyan {
+  top: 8%;
+  right: auto;
+  bottom: auto;
+  left: -10%;
+  width: 40vw;
+  height: 40vw;
+  background: radial-gradient(circle, rgba(0, 209, 255, 0.45), transparent 68%);
+}
+
+.profile-backdrop__glow--red {
+  top: auto;
+  right: -8%;
+  bottom: -12%;
+  left: auto;
+  width: 38vw;
+  height: 38vw;
+  background: radial-gradient(circle, rgba(255, 42, 102, 0.34), transparent 69%);
+}
+
+.profile-nav {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  width: min(calc(100% - 32px), var(--page-width));
+  min-height: 78px;
+  margin: 16px auto 0;
+  padding: 0 22px;
+  border: 1px solid var(--line);
+  align-items: center;
+  justify-content: space-between;
+  background: linear-gradient(105deg, rgba(11, 26, 47, 0.94), rgba(7, 13, 27, 0.86));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.26), inset 0 1px rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(18px);
+  clip-path: polygon(13px 0, 100% 0, 100% calc(100% - 13px), calc(100% - 13px) 100%, 0 100%, 0 13px);
+}
+
+.profile-nav::after {
+  position: absolute;
+  right: 22px;
+  bottom: 0;
+  left: 22px;
+  height: 2px;
+  background: linear-gradient(90deg, var(--cyan), transparent 30%, transparent 70%, var(--violet));
+  content: "";
+  opacity: 0.62;
+}
+
+.profile-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-brand__mark {
+  display: grid;
+  width: 46px;
+  height: 46px;
+  border: 1px solid rgba(255, 255, 255, 0.38);
+  place-items: center;
+  color: #03101d;
+  background: linear-gradient(145deg, #9af4ff, #2fc5ff 60%, #7188ff);
+  box-shadow: 0 0 25px rgba(95, 231, 255, 0.16);
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 0.86rem;
+  font-weight: 900;
+  clip-path: polygon(15% 0, 85% 0, 100% 22%, 88% 100%, 12% 100%, 0 22%);
+}
+
+.profile-brand > span:last-child {
+  display: flex;
+  flex-direction: column;
+  line-height: 1;
+}
+
+.profile-brand small {
+  margin-bottom: 4px;
+  color: #71839c;
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.profile-brand strong {
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.08rem;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+}
+
+.profile-brand i {
+  color: var(--orange);
+  font-style: inherit;
+}
+
+.profile-nav__return {
+  display: inline-flex;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid rgba(255, 255, 255, 0.13);
+  align-items: center;
+  gap: 9px;
+  color: #c6d2e2;
+  background: rgba(255, 255, 255, 0.035);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.profile-nav__return span {
+  color: var(--cyan);
+  font-size: 1rem;
+}
+
+.profile-nav__return:hover,
+.profile-nav__return:focus-visible {
+  border-color: rgba(95, 231, 255, 0.55);
+  color: white;
+  background: rgba(95, 231, 255, 0.1);
+  outline: none;
+  transform: translateX(-3px);
+}
+
+.profile-shell {
+  display: grid;
+  width: min(calc(100% - 32px), var(--page-width));
+  margin: 14px auto 32px;
+  grid-template-areas:
+    "title title title"
+    "stats stats stats"
+    "roster hero settings";
+  grid-template-columns: minmax(280px, 1.1fr) minmax(320px, 1.18fr) minmax(240px, 0.78fr);
+  gap: 14px;
+}
+
+.profile-shell > section {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  box-shadow: 0 22px 54px rgba(0, 0, 0, 0.25), inset 0 1px rgba(255, 255, 255, 0.025);
+  backdrop-filter: blur(14px);
+}
+
+.profile-shell > section::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 52px;
+  height: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 13px var(--cyan);
+  content: "";
+}
+
+#PageTitle {
+  grid-area: title;
+  display: flex;
+  min-height: 210px;
+  padding: clamp(34px, 5vw, 66px) clamp(30px, 6vw, 82px);
+  flex-direction: column;
+  justify-content: center;
+  background:
+    linear-gradient(90deg, rgba(6, 18, 34, 0.98) 0%, rgba(7, 18, 34, 0.86) 52%, rgba(22, 11, 36, 0.75) 100%),
+    var(--panel);
+  clip-path: polygon(17px 0, 100% 0, 100% calc(100% - 17px), calc(100% - 17px) 100%, 0 100%, 0 17px);
+}
+
+#PageTitle::before {
+  position: absolute;
+  right: clamp(22px, 5vw, 74px);
+  bottom: -38px;
+  color: rgba(137, 170, 213, 0.045);
+  content: "PROFILE";
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: clamp(7rem, 15vw, 13rem);
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -0.07em;
+  line-height: 0.8;
+  pointer-events: none;
+}
+
+.profile-kicker {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 8px;
+  color: var(--cyan);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+.profile-kicker span {
+  color: #52647e;
+}
+
+#ProfileTitle {
+  position: relative;
+  z-index: 1;
+  max-width: 1050px;
+  margin: 0;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: clamp(2.7rem, 5.4vw, 5.4rem);
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -0.055em;
+  line-height: 0.88;
+  text-transform: uppercase;
+  text-shadow: 8px 9px 0 rgba(95, 231, 255, 0.07), -4px 0 0 rgba(255, 79, 113, 0.06);
+}
+
+.profile-status {
+  position: absolute;
+  top: 22px;
+  right: 26px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #b8c8da;
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.profile-status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 10px var(--green);
+}
+
+.profile-status span {
+  padding-left: 9px;
+  border-left: 1px solid var(--line);
+  color: #60718a;
+}
+
+#WinLossMatchesDisplay {
+  grid-area: stats;
+  display: grid;
+  overflow: visible;
+  border: 0;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+#WinLossMatchesDisplay::after {
+  display: none;
+}
+
+.WLMDisplay {
+  position: relative;
+  min-height: 106px;
+  margin: 0;
+  padding: 48px 20px 20px;
+  border: 1px solid var(--line);
+  overflow: hidden;
+  color: white;
+  background:
+    linear-gradient(130deg, rgba(95, 231, 255, 0.075), transparent 48%),
+    rgba(9, 19, 36, 0.9);
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: clamp(1.25rem, 2vw, 1.65rem);
+  font-style: italic;
+  font-weight: 850;
+  letter-spacing: -0.025em;
+  text-transform: uppercase;
+  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+}
+
+.WLMDisplay::before {
+  position: absolute;
+  top: 17px;
+  left: 20px;
+  color: #718199;
+  content: "Career telemetry";
+  font-family: "Rajdhani", sans-serif;
+  font-size: 0.54rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.WLMDisplay::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 36px;
+  height: 3px;
+  background: var(--cyan);
+  content: "";
+  box-shadow: 0 0 12px rgba(95, 231, 255, 0.48);
+}
+
+#LossDisplay::after { background: var(--red); box-shadow: 0 0 12px rgba(255, 79, 113, 0.5); }
+#MatchesDisplay::after { background: var(--violet); box-shadow: 0 0 12px rgba(156, 108, 255, 0.5); }
+#WinPercentDisplay::after { background: var(--orange); box-shadow: 0 0 12px rgba(255, 173, 77, 0.5); }
+
+#HeroListSection {
+  grid-area: roster;
+  min-height: 390px;
+  padding: 76px 22px 22px;
+  clip-path: polygon(13px 0, 100% 0, 100% calc(100% - 13px), calc(100% - 13px) 100%, 0 100%, 0 13px);
+}
+
+#HeroListSection::before,
+#TopHeroDisplay::before,
+#ProfileSettings::before {
+  position: absolute;
+  top: 24px;
+  left: 23px;
+  z-index: 4;
+  color: white;
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 1.35rem;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+#HeroListSection::before { content: "Hero Rotation"; }
+
+#HeroList {
+  display: grid;
+  grid-template-columns: 1fr;
+  margin: 0;
+  padding: 0;
+  gap: 10px;
+  list-style: none;
+  counter-reset: heroes;
+}
+
+#HeroList li {
+  position: relative;
+  display: flex;
+  min-height: 64px;
+  padding: 12px 14px 12px 56px;
+  border: 1px solid rgba(120, 164, 211, 0.15);
+  align-items: center;
+  overflow: hidden;
+  color: #d7e1ee;
+  background: linear-gradient(90deg, rgba(95, 231, 255, 0.075), rgba(255, 255, 255, 0.018));
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  counter-increment: heroes;
+  transition: border-color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+#HeroList li::before {
+  position: absolute;
+  top: 10px;
+  bottom: 10px;
+  left: 11px;
+  display: grid;
+  width: 36px;
+  border: 1px solid rgba(95, 231, 255, 0.25);
+  place-items: center;
+  color: var(--cyan);
+  background: rgba(95, 231, 255, 0.07);
+  content: counter(heroes, decimal-leading-zero);
+  font-size: 0.66rem;
+  font-weight: 900;
+}
+
+#HeroList li::after {
+  position: absolute;
+  right: 12px;
+  color: #50637c;
+  content: "›";
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.13em;
+}
+
+#HeroList li:hover {
+  border-color: rgba(95, 231, 255, 0.46);
+  background: linear-gradient(90deg, rgba(95, 231, 255, 0.13), rgba(255, 255, 255, 0.025));
+  transform: translateX(4px);
+}
+
+#TopHeroDisplay {
+  grid-area: hero;
+  min-height: 390px;
+  padding: 70px 22px 22px;
+  background:
+    radial-gradient(circle at 50% 48%, rgba(255, 68, 105, 0.15), transparent 42%),
+    linear-gradient(145deg, rgba(19, 23, 43, 0.95), rgba(7, 12, 25, 0.96));
+  clip-path: polygon(13px 0, 100% 0, 100% calc(100% - 13px), calc(100% - 13px) 100%, 0 100%, 0 13px);
+}
+
+#TopHeroDisplay::before { content: "Signature Hero"; }
+
+#TopHeroDisplay::after {
+  position: absolute;
+  top: 19px;
+  right: 20px;
+  width: 44px;
+  height: 2px;
+  background: var(--red);
+  box-shadow: 0 0 14px var(--red);
+  content: "";
+}
+
+#HeroPicture {
+  position: absolute;
+  top: 76px;
+  right: 24px;
+  bottom: 70px;
+  left: 24px;
+  display: block;
+  width: calc(100% - 48px);
+  height: calc(100% - 146px);
+  border: 1px solid rgba(255, 79, 113, 0.35);
+  object-fit: cover;
+  object-position: center 20%;
+  background: #11182a;
+  box-shadow: 0 18px 35px rgba(0, 0, 0, 0.35), 0 0 30px rgba(255, 79, 113, 0.08);
+  clip-path: polygon(18px 0, 100% 0, 100% calc(100% - 18px), calc(100% - 18px) 100%, 0 100%, 0 18px);
+  filter: saturate(1.08) contrast(1.05);
+}
+
+#TopHeroPicks {
+  position: absolute;
+  right: 24px;
+  bottom: 22px;
+  left: 24px;
+  z-index: 3;
+  margin: 0;
+  padding: 11px 14px;
+  border-left: 3px solid var(--orange);
+  color: #ffe5c6;
+  background: rgba(28, 18, 11, 0.94);
+  font-size: 0.7rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+#ProfileSettings {
+  grid-area: settings;
+  display: flex;
+  min-height: 390px;
+  padding: 76px 22px 22px;
+  flex-direction: column;
+  gap: 10px;
+  clip-path: polygon(13px 0, 100% 0, 100% calc(100% - 13px), calc(100% - 13px) 100%, 0 100%, 0 13px);
+}
+
+#ProfileSettings::before { content: "Account Controls"; }
+
+.SettingsButtons {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  padding: 0 42px 0 17px;
+  border: 1px solid rgba(129, 166, 208, 0.17);
+  align-items: center;
+  color: #ced9e8;
+  background: linear-gradient(95deg, rgba(95, 231, 255, 0.065), rgba(255, 255, 255, 0.018));
+  font-size: 0.68rem;
+  font-weight: 850;
+  letter-spacing: 0.09em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 150ms ease, border-color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.SettingsButtons::after {
+  position: absolute;
+  right: 16px;
+  color: var(--cyan);
+  content: "›";
+  font-size: 1.35rem;
+  font-weight: 500;
+}
+
+.SettingsButtons:hover,
+.SettingsButtons:focus-visible {
+  border-color: rgba(95, 231, 255, 0.52);
+  color: white;
+  background: linear-gradient(95deg, rgba(95, 231, 255, 0.14), rgba(95, 231, 255, 0.035));
+  outline: none;
+  transform: translateX(4px);
+}
+
+#LogOut {
+  margin-top: auto;
+}
+
+#LogOut::after {
+  color: var(--orange);
+}
+
+#DeleteAccount {
+  border-color: rgba(255, 79, 113, 0.23);
+  color: #ffbdc9;
+  background: linear-gradient(95deg, rgba(255, 79, 113, 0.1), rgba(255, 255, 255, 0.012));
+}
+
+#DeleteAccount::after {
+  color: var(--red);
+}
+
+#DeleteAccount:hover,
+#DeleteAccount:focus-visible {
+  border-color: rgba(255, 79, 113, 0.64);
+  background: linear-gradient(95deg, rgba(255, 79, 113, 0.19), rgba(255, 79, 113, 0.035));
+}
+
+footer {
+  width: min(calc(100% - 32px), var(--page-width));
+  margin: 0 auto;
+  padding: 0 0 22px;
+  color: #526078;
+  font-size: 0.68rem;
+  text-align: center;
+}
+
+footer p {
+  margin: 0;
+}
+
+@media (max-width: 980px) {
+  .profile-shell {
+    grid-template-areas:
+      "title title"
+      "stats stats"
+      "roster hero"
+      "settings settings";
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  #ProfileSettings {
+    display: grid;
+    min-height: 0;
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  #ProfileSettings::before {
+    grid-column: 1 / -1;
+  }
+
+  #LogOut {
+    margin-top: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .profile-nav,
+  .profile-shell,
+  footer {
+    width: min(calc(100% - 20px), var(--page-width));
+  }
+
+  .profile-nav {
+    min-height: 68px;
+    margin-top: 10px;
+    padding-inline: 14px;
+  }
+
+  .profile-brand__mark {
+    width: 40px;
+    height: 40px;
+  }
+
+  .profile-brand small {
+    display: none;
+  }
+
+  .profile-nav__return {
+    min-height: 36px;
+    padding-inline: 12px;
+    font-size: 0.62rem;
+  }
+
+  .profile-shell {
+    grid-template-areas:
+      "title"
+      "stats"
+      "hero"
+      "roster"
+      "settings";
+    grid-template-columns: 1fr;
+    margin-top: 10px;
+    gap: 10px;
+  }
+
+  #PageTitle {
+    min-height: 185px;
+    padding: 50px 22px 26px;
+  }
+
+  #PageTitle::before {
+    right: 14px;
+    font-size: 7rem;
+  }
+
+  .profile-status {
+    top: 17px;
+    right: 18px;
+  }
+
+  #WinLossMatchesDisplay {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .WLMDisplay {
+    min-height: 94px;
+    padding: 43px 15px 16px;
+  }
+
+  .WLMDisplay::before {
+    top: 15px;
+    left: 15px;
+  }
+}
+
+@media (max-width: 460px) {
+  .profile-brand > span:last-child {
+    display: none;
+  }
+
+  .profile-nav__return {
+    letter-spacing: 0.06em;
+  }
+
+  #ProfileTitle {
+    font-size: 2.45rem;
+  }
+
+  .profile-kicker {
+    font-size: 0.58rem;
+    letter-spacing: 0.14em;
+  }
+
+  .profile-status span {
+    display: none;
+  }
+
+  #WinLossMatchesDisplay {
+    grid-template-columns: 1fr;
+  }
+
+  #HeroList {
+    grid-template-columns: 1fr;
+  }
+
+  .WLMDisplay {
+    min-height: 80px;
+  }
+
+  #ProfileSettings {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Advanced profile command-deck layer. */
+
+.profile-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.profile-shell > section {
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.profile-shell > section:not(#WinLossMatchesDisplay):hover {
+  border-color: rgba(116, 190, 236, 0.28);
+  box-shadow:
+    0 26px 58px rgba(0, 0, 0, 0.32),
+    inset 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 0 40px rgba(95, 231, 255, 0.018);
+}
+
+.profile-backdrop__grid {
+  animation: profile-grid-drift 26s linear infinite;
+}
+
+.profile-nav {
+  background:
+    linear-gradient(90deg, transparent 0 7%, rgba(95, 231, 255, 0.035) 7% 7.15%, transparent 7.15% 82%, rgba(156, 108, 255, 0.035) 82% 82.15%, transparent 82.15%),
+    linear-gradient(105deg, rgba(11, 26, 47, 0.96), rgba(7, 13, 27, 0.9));
+}
+
+.profile-brand__mark {
+  position: relative;
+  animation: profile-mark-glow 3.8s ease-in-out infinite;
+}
+
+#PageTitle {
+  background:
+    repeating-linear-gradient(0deg, transparent 0 5px, rgba(255, 255, 255, 0.012) 5px 6px),
+    linear-gradient(90deg, rgba(6, 18, 34, 0.99) 0%, rgba(7, 18, 34, 0.9) 52%, rgba(22, 11, 36, 0.8) 100%),
+    var(--panel);
+}
+
+#PageTitle h1::after {
+  display: inline-block;
+  width: clamp(30px, 5vw, 74px);
+  height: 0.11em;
+  margin-left: 0.16em;
+  background: linear-gradient(90deg, var(--red), var(--violet));
+  box-shadow: 0 0 18px rgba(255, 79, 113, 0.35);
+  content: "";
+  vertical-align: 0.19em;
+  transform: skewX(-22deg);
+}
+
+.profile-kicker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-kicker::before {
+  width: 18px;
+  height: 6px;
+  border: 1px solid var(--cyan);
+  border-right-width: 5px;
+  content: "";
+  box-shadow: 0 0 10px rgba(95, 231, 255, 0.35);
+}
+
+.profile-status i {
+  animation: profile-status-pulse 1.9s ease-in-out infinite;
+}
+
+.WLMDisplay {
+  background:
+    linear-gradient(135deg, rgba(95, 231, 255, 0.095), transparent 38%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018), transparent 55%),
+    rgba(9, 19, 36, 0.92);
+  transition: border-color 170ms ease, box-shadow 170ms ease, transform 170ms ease;
+}
+
+.WLMDisplay:hover {
+  border-color: rgba(95, 231, 255, 0.38);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, 0.25), inset 0 0 28px rgba(95, 231, 255, 0.035);
+  transform: translateY(-4px);
+}
+
+#LossDisplay:hover { border-color: rgba(255, 79, 113, 0.4); }
+#MatchesDisplay:hover { border-color: rgba(156, 108, 255, 0.42); }
+#WinPercentDisplay:hover { border-color: rgba(255, 173, 77, 0.42); }
+
+#HeroListSection {
+  min-height: 670px;
+  background:
+    radial-gradient(circle at 6% 34%, rgba(95, 231, 255, 0.09), transparent 27%),
+    repeating-linear-gradient(135deg, transparent 0 26px, rgba(95, 231, 255, 0.018) 26px 27px),
+    var(--panel-strong);
+}
+
+#HeroListSection::before {
+  padding-left: 19px;
+  border-left: 2px solid var(--cyan);
+  text-shadow: 0 0 16px rgba(95, 231, 255, 0.18);
+}
+
+#HeroList {
+  position: relative;
+  padding-left: 31px;
+  gap: 8px;
+}
+
+#HeroList::before {
+  position: absolute;
+  top: 17px;
+  bottom: 17px;
+  left: 17px;
+  width: 2px;
+  background:
+    linear-gradient(to bottom, var(--cyan), rgba(95, 231, 255, 0.2) 42%, rgba(156, 108, 255, 0.45) 72%, var(--red));
+  box-shadow: 0 0 10px rgba(95, 231, 255, 0.32);
+  content: "";
+}
+
+#HeroList li {
+  min-height: 55px;
+  padding: 10px 78px 10px 51px;
+  border-color: rgba(120, 164, 211, 0.16);
+  background:
+    linear-gradient(90deg, rgba(95, 231, 255, 0.1), transparent 48%),
+    rgba(10, 22, 40, 0.92);
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+#HeroList li::before {
+  top: 9px;
+  bottom: 9px;
+  left: 9px;
+  z-index: 2;
+  width: 29px;
+  border: 1px solid rgba(95, 231, 255, 0.55);
+  color: #bdf7ff;
+  background: #071626;
+  box-shadow: 0 0 0 5px rgba(5, 11, 23, 0.95), 0 0 16px rgba(95, 231, 255, 0.18);
+  clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+}
+
+#HeroList li:nth-child(3n + 2)::before {
+  border-color: rgba(156, 108, 255, 0.62);
+  color: #cfbaff;
+  box-shadow: 0 0 0 5px rgba(5, 11, 23, 0.95), 0 0 16px rgba(156, 108, 255, 0.2);
+}
+
+#HeroList li:nth-child(3n)::before {
+  border-color: rgba(255, 79, 113, 0.56);
+  color: #ffbdca;
+  box-shadow: 0 0 0 5px rgba(5, 11, 23, 0.95), 0 0 16px rgba(255, 79, 113, 0.18);
+}
+
+#HeroList li::after {
+  right: 16px;
+  color: #5d718b;
+  content: "DOSSIER  ›";
+}
+
+#HeroList li:hover {
+  border-color: rgba(95, 231, 255, 0.48);
+  background:
+    linear-gradient(90deg, rgba(95, 231, 255, 0.17), transparent 54%),
+    rgba(12, 26, 47, 0.98);
+  box-shadow: 0 9px 24px rgba(0, 0, 0, 0.22), inset 3px 0 var(--cyan);
+  transform: translateX(7px);
+}
+
+#TopHeroDisplay {
+  min-height: 670px;
+  background:
+    linear-gradient(160deg, transparent 65%, rgba(255, 79, 113, 0.08)),
+    repeating-linear-gradient(45deg, transparent 0 31px, rgba(156, 108, 255, 0.018) 31px 32px),
+    radial-gradient(circle at 50% 48%, rgba(255, 68, 105, 0.18), transparent 45%),
+    linear-gradient(145deg, rgba(19, 23, 43, 0.97), rgba(7, 12, 25, 0.98));
+}
+
+#HeroPicture {
+  top: 84px;
+  right: 30px;
+  bottom: 84px;
+  left: 30px;
+  width: calc(100% - 60px);
+  height: calc(100% - 168px);
+  border: 1px solid rgba(255, 79, 113, 0.52);
+  box-shadow:
+    0 24px 48px rgba(0, 0, 0, 0.44),
+    0 0 0 7px rgba(255, 255, 255, 0.018),
+    0 0 38px rgba(255, 79, 113, 0.13);
+  transition: filter 220ms ease, transform 220ms cubic-bezier(.2, .8, .2, 1);
+}
+
+#TopHeroDisplay:hover #HeroPicture {
+  filter: saturate(1.18) contrast(1.08) brightness(1.04);
+  transform: scale(1.015);
+}
+
+#TopHeroPicks {
+  right: 30px;
+  bottom: 24px;
+  left: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#TopHeroPicks::after {
+  color: rgba(255, 173, 77, 0.55);
+  content: "PICK TELEMETRY // LIVE";
+  font-size: 0.49rem;
+  letter-spacing: 0.13em;
+}
+
+#ProfileSettings {
+  min-height: 670px;
+  background:
+    linear-gradient(180deg, rgba(95, 231, 255, 0.035), transparent 38%),
+    repeating-linear-gradient(135deg, transparent 0 29px, rgba(95, 231, 255, 0.014) 29px 30px),
+    var(--panel-strong);
+}
+
+.SettingsButtons {
+  min-height: 62px;
+  padding-left: 58px;
+  clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+}
+
+.SettingsButtons::before {
+  position: absolute;
+  left: 14px;
+  display: grid;
+  width: 29px;
+  height: 29px;
+  border: 1px solid rgba(95, 231, 255, 0.25);
+  place-items: center;
+  color: var(--cyan);
+  background: rgba(95, 231, 255, 0.07);
+  font-size: 0.48rem;
+  font-weight: 900;
+  letter-spacing: 0.03em;
+}
+
+#ChangeUsername::before { content: "ID"; }
+#ChangePassword::before { content: "SEC"; }
+#LogOut::before { border-color: rgba(255, 173, 77, 0.3); color: var(--orange); background: rgba(255, 173, 77, 0.07); content: "OUT"; }
+#DeleteAccount::before { border-color: rgba(255, 79, 113, 0.34); color: var(--red); background: rgba(255, 79, 113, 0.08); content: "DEL"; }
+
+@keyframes profile-grid-drift {
+  to { transform: translate3d(64px, 64px, 0); }
+}
+
+@keyframes profile-mark-glow {
+  50% { filter: brightness(1.12); box-shadow: 0 0 34px rgba(95, 231, 255, 0.28); }
+}
+
+@keyframes profile-status-pulse {
+  50% { opacity: 0.45; transform: scale(0.72); }
+}
+
+@media (max-width: 980px) {
+  #HeroListSection,
+  #TopHeroDisplay {
+    min-height: 670px;
+  }
+
+  #ProfileSettings {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  #HeroListSection,
+  #TopHeroDisplay {
+    min-height: 650px;
+  }
+
+  #TopHeroPicks::after {
+    display: none;
+  }
+}
+
+@media (max-width: 460px) {
+  #HeroList {
+    padding-left: 26px;
+  }
+
+  #HeroList li {
+    padding-right: 48px;
+    padding-left: 48px;
+  }
+
+  #HeroList li::after {
+    content: "›";
+  }
+
+  #PageTitle h1::after {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-backdrop__grid,
+  .profile-brand__mark,
+  .profile-status i {
+    animation: none;
+  }
+}

@@ -9,10 +9,38 @@
   <meta name="description" content="Profile Page for PalaRivals Watch.">
 </head>
 
-<body>
+<body class="profile-page">
+  <div class="profile-backdrop" aria-hidden="true">
+    <span class="profile-backdrop__grid"></span>
+    <span class="profile-backdrop__glow profile-backdrop__glow--cyan"></span>
+    <span class="profile-backdrop__glow profile-backdrop__glow--red"></span>
+    <span class="profile-backdrop__beam"></span>
+    <span class="profile-backdrop__particles"></span>
+  </div>
 
+  <header class="profile-nav">
+    <a class="profile-brand" href="Main.html" aria-label="Return to PalaRivals Watch main menu">
+      <span class="profile-brand__mark">PRW</span>
+      <span><small>Autobattler command</small><strong>PalaRivals <i>Watch</i></strong></span>
+    </a>
+    <a class="profile-nav__return" href="Main.html"><span aria-hidden="true">&#8592;</span> Main Menu</a>
+  </header>
+
+  <main class="profile-shell">
     <section id="PageTitle">
+        <p class="profile-kicker">Player dossier <span>//</span> Account overview</p>
         <h1 id="ProfileTitle">PlaceHolder, Put Username Here.</h1>
+        <div class="profile-status"><i></i> Online <span>PRW-001</span></div>
+        <div class="profile-identity-mark" aria-hidden="true">
+          <span class="profile-identity-mark__orbit"></span>
+          <strong>PRW</strong>
+          <small>Verified Player</small>
+        </div>
+        <div class="profile-readout" aria-hidden="true">
+          <span><small>Clearance</small><strong>Combatant</strong></span>
+          <i></i>
+          <span><small>Network</small><strong>Crossworld</strong></span>
+        </div>
     </section>
 
     <section id="WinLossMatchesDisplay">
@@ -37,7 +65,8 @@
     </section>
     
     <section id="TopHeroDisplay">
-        <img id="HeroPicture" alt="HeroGoesHere">
+        <img id="HeroPicture" src="Img/Characters/MarvelRivals/IronManPNG.jpeg" alt="Most played hero">
+        <div class="hero-display-chrome" aria-hidden="true"><span>Visual lock</span><i></i><span>Universe linked</span></div>
         <p id="TopHeroPicks">Times Picked: PlaceHolder</p>
     </section>
 
@@ -46,14 +75,14 @@
         <button class="SettingsButtons" id="ChangePassword">Change Password</button>
         <button class="SettingsButtons" id="LogOut">Log Out</button>
         <button class="SettingsButtons" id="DeleteAccount">Delete Account</button>
+        <div class="profile-security" aria-hidden="true"><span><i></i> Account link secure</span><small>Command sync // active</small></div>
     </section>
-</body>
+  </main>
 
-
-<footer>
+  <footer>
     <p>Fan-made project. Characters belong to NetEase Games, Blizzard Entertainment, and Hi-Rez Studios.</p>
-</footer>
+  </footer>
 
-<script src="js/profile/Profile.js"></script>
+  <script src="js/profile/Profile.js"></script>
 </body>
 </html>
