@@ -464,6 +464,13 @@
           [420, 560, 720, 960].forEach((frequency, index) => tone(frequency, 0.07, 0.038, "triangle", index * 0.045, frequency * 1.12));
           noise(0.13, 0.025, 2800);
           break;
+        case "freeze":
+          [1240, 980, 760].forEach((frequency, index) => tone(frequency, 0.2, 0.035, "sine", index * 0.045, frequency * 0.88));
+          noise(0.16, 0.018, 6400, 0, "highpass");
+          break;
+        case "unfreeze":
+          [620, 820, 1120].forEach((frequency, index) => tone(frequency, 0.12, 0.032, "triangle", index * 0.045, frequency * 1.08));
+          break;
         case "upgrade":
         case "merge":
         case "levelUp":

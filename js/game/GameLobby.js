@@ -12,7 +12,12 @@ const teamSlots = [...teamBoard.querySelectorAll(".team-slot")];
 const benchSlots = [...sidelineBoard.querySelectorAll(".team-slot")];
 const rosterSlots = [...document.querySelectorAll(".roster-slot")];
 const shopCards = [...document.querySelectorAll(".shop-card")];
+const shopDeck = document.querySelector(".shop-deck");
+const shopRailStatus = document.querySelector(".shop-deck__rail span:last-child");
 const rerollButton = document.querySelector("#rerollShop");
+const freezeShopButton = document.querySelector("#freezeShop");
+const freezeShopLabel = freezeShopButton.querySelector("strong");
+const freezeShopHint = freezeShopButton.querySelector("small");
 const upgradeShopButton = document.querySelector("#upgradeShop");
 const upgradeShopCostElement = document.querySelector("#upgradeShopCost");
 const upgradeShopHintElement = document.querySelector("#upgradeShopHint");
@@ -66,6 +71,7 @@ const gameState = {
   pairings: [],
   combatResults: [],
   selectedShopId: null,
+  shopFrozen: false,
   team: Array(6).fill(null),
   bench: Array(6).fill(null),
   drag: null,
@@ -804,7 +810,25 @@ function updateHud() {
     buyButton.setAttribute("aria-disabled", String(cannotAfford || !gameState.buildPhaseActive));
   });
 
-  rerollButton.disabled = gameState.credits < 1 || !gameState.buildPhaseActive;
+  freezeShopButton.disabled = !gameState.buildPhaseActive;
+  freezeShopButton.classList.toggle("freeze-shop-button--active", gameState.shopFrozen);
+  freezeShopButton.setAttribute("aria-pressed", String(gameState.shopFrozen));
+  freezeShopButton.setAttribute("aria-disabled", String(freezeShopButton.disabled));
+  freezeShopButton.setAttribute(
+    "aria-label",
+    gameState.shopFrozen
+      ? "Unfreeze the shop. Its offers will refresh next round."
+      : "Freeze the shop. Its offers will remain for the next round.",
+  );
+  freezeShopLabel.textContent = gameState.shopFrozen ? "Frozen" : "Freeze";
+  freezeShopHint.textContent = gameState.shopFrozen ? "Saved next round" : "Keep next round";
+  shopDeck.classList.toggle("shop-deck--frozen", gameState.shopFrozen);
+  shopRailStatus.textContent = gameState.shopFrozen ? "Stock frozen" : "Stock refreshed";
+  shopCards.forEach((card) => {
+    card.classList.toggle("shop-card--frozen", gameState.shopFrozen && card.dataset.status !== "deployed");
+  });
+
+  rerollButton.disabled = gameState.shopFrozen || gameState.credits < 1 || !gameState.buildPhaseActive;
   rerollButton.setAttribute("aria-disabled", String(rerollButton.disabled));
 
   const isMaxTier = gameState.shopTier >= MAX_SHOP_TIER;
@@ -956,6 +980,12 @@ function rerollShop() {
     return;
   }
 
+  if (gameState.shopFrozen) {
+    window.PRWAudio?.play("error");
+    announce("Unfreeze the shop before rerolling it.");
+    return;
+  }
+
   if (gameState.credits < 1) {
     window.PRWAudio?.play("error");
     announce("You need 1 credit to reroll the shop.");
@@ -979,6 +1009,24 @@ function rerollShop() {
   window.PRWAudio?.play("reroll");
   updateHud();
   announce(`Shop rerolled for 1 credit. ${refreshableCards.length} new heroes available.`);
+}
+
+function toggleShopFreeze() {
+  if (!gameState.buildPhaseActive) {
+    window.PRWAudio?.play("error");
+    announce("The shop can only be frozen during the build phase.");
+    return;
+  }
+
+  markHumanNotReady();
+  gameState.shopFrozen = !gameState.shopFrozen;
+  window.PRWAudio?.play(gameState.shopFrozen ? "freeze" : "unfreeze");
+  updateHud();
+  announce(
+    gameState.shopFrozen
+      ? "Shop frozen. These offers will remain for the next build phase."
+      : "Shop unfrozen. Its offers will refresh next round.",
+  );
 }
 
 function upgradeShopTier() {
@@ -1667,10 +1715,12 @@ function completeCombatRound() {
       player.buildStatus = "Preparing";
     }
   });
-  initializeRandomShop();
+  const preservedFrozenShop = prepareShopForNextRound();
   renderRoster();
   startBuildTimer();
-  announce(`Round ${gameState.round} build phase started. New credits received.`);
+  announce(
+    `Round ${gameState.round} build phase started. New credits received.${preservedFrozenShop ? " Frozen shop offers were preserved." : ""}`,
+  );
 }
 
 function finishBuildPhase() {
@@ -1738,6 +1788,26 @@ function startBuildTimer() {
 function initializeRandomShop() {
   const startingHeroes = shuffledHeroes(new Set(), shopCards.length);
   shopCards.forEach((card, index) => setShopCardHero(card, startingHeroes[index]));
+}
+
+function prepareShopForNextRound() {
+  if (!gameState.shopFrozen) {
+    initializeRandomShop();
+    return false;
+  }
+
+  const preservedCards = shopCards.filter((card) => card.dataset.status !== "deployed");
+  const refreshableCards = shopCards.filter((card) => card.dataset.status === "deployed");
+  const preservedHeroIds = new Set(
+    preservedCards
+      .map((card) => shopHeroes.get(card.dataset.shopId)?.catalogId)
+      .filter(Boolean),
+  );
+  const replacementHeroes = shuffledHeroes(preservedHeroIds, refreshableCards.length);
+
+  refreshableCards.forEach((card, index) => setShopCardHero(card, replacementHeroes[index]));
+  gameState.shopFrozen = false;
+  return true;
 }
 
 function selectPurchasedHero(heroId) {
@@ -2442,6 +2512,7 @@ rosterSlots.forEach((slot) => {
 });
 
 rerollButton.addEventListener("click", rerollShop);
+freezeShopButton.addEventListener("click", toggleShopFreeze);
 upgradeShopButton.addEventListener("click", upgradeShopTier);
 readyButton.addEventListener("click", toggleHumanReady);
 brandExit.addEventListener("click", (event) => {

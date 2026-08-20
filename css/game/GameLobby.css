@@ -1252,6 +1252,106 @@ a {
   font-size: 0.85rem;
 }
 
+.shop-meta {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 0.38rem;
+}
+
+.freeze-shop-button {
+  display: flex;
+  min-width: 112px;
+  min-height: 38px;
+  padding: 0.36rem 0.48rem;
+  border: 1px solid rgba(95, 231, 255, 0.25);
+  clip-path: polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+  align-items: center;
+  gap: 0.42rem;
+  color: #9fc6d4;
+  background: linear-gradient(135deg, rgba(95, 231, 255, 0.08), rgba(34, 69, 109, 0.08));
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease, background 150ms ease, transform 150ms ease;
+}
+
+.freeze-shop-button:hover:not(:disabled),
+.freeze-shop-button:focus-visible {
+  border-color: rgba(111, 239, 255, 0.7);
+  color: #effdff;
+  outline: none;
+  transform: translateY(-2px);
+}
+
+.freeze-shop-button:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.freeze-shop-button__icon {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  flex: 0 0 25px;
+  border: 1px solid rgba(95, 231, 255, 0.3);
+  border-radius: 50%;
+  place-items: center;
+  color: var(--cyan);
+  font-size: 0.72rem;
+  text-shadow: 0 0 9px rgba(95, 231, 255, 0.65);
+}
+
+.freeze-shop-button > span:last-child {
+  display: grid;
+  min-width: 0;
+  gap: 0.1rem;
+}
+
+.freeze-shop-button strong,
+.freeze-shop-button small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.freeze-shop-button strong {
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+}
+
+.freeze-shop-button small {
+  color: #647b8e;
+  font-size: 0.34rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+}
+
+.freeze-shop-button--active {
+  border-color: rgba(137, 239, 255, 0.78);
+  color: #f2fdff;
+  background: linear-gradient(135deg, rgba(95, 231, 255, 0.23), rgba(74, 123, 255, 0.14));
+  box-shadow: 0 0 22px rgba(95, 231, 255, 0.13), inset 0 0 18px rgba(95, 231, 255, 0.08);
+}
+
+.freeze-shop-button--active .freeze-shop-button__icon {
+  background: rgba(95, 231, 255, 0.16);
+  box-shadow: 0 0 16px rgba(95, 231, 255, 0.22);
+}
+
+.shop-deck--frozen {
+  border-color: rgba(115, 225, 255, 0.42) !important;
+  box-shadow: inset 0 0 48px rgba(95, 231, 255, 0.055), 0 24px 55px rgba(0, 0, 0, 0.34) !important;
+}
+
+.shop-card--frozen {
+  border-color: color-mix(in srgb, var(--accent) 42%, #a8f5ff 58%) !important;
+  box-shadow: 0 0 24px rgba(95, 231, 255, 0.16), inset 0 0 18px rgba(173, 247, 255, 0.06) !important;
+}
+
+.shop-card--frozen::before {
+  filter: saturate(0.78) brightness(1.12);
+}
+
 .shop-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(92px, 140px));
