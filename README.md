@@ -18,6 +18,7 @@ This repository is ready to deploy as a static Vercel project. It does not requi
    - **Output Directory:** Leave empty
    - **Install Command:** Leave empty
 5. Select **Deploy**.
+6. In the Vercel project dashboard, open **Analytics**, select **Enable**, and redeploy if Vercel asks you to. No analytics environment variables are required.
 
 The included `vercel.json` configuration provides these routes:
 
