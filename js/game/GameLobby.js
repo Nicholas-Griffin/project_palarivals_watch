@@ -3,6 +3,7 @@
 const creditsElement = document.querySelector("#currentCredits");
 const unitCountElement = document.querySelector("#unitCount");
 const sidelineCountElement = document.querySelector("#sidelineCount");
+const traitListElement = document.querySelector("#traitList");
 const gameStatusElement = document.querySelector("#gameStatus");
 const deploymentWorkspace = document.querySelector("#deploymentWorkspace");
 const teamBoard = document.querySelector("#teamBoard");
@@ -68,6 +69,7 @@ const COMBAT_EVENT_DURATION = 620;
 const COMBAT_RESULT_DURATION = 6_000;
 const AI_NAME_SOURCE = "data/ai-names.json";
 const HERO_ABILITY_SOURCE = "data/hero-abilities.json";
+const HERO_TRAIT_SOURCE = "data/hero-traits.json";
 const FALLBACK_AI_NAMES = [
   "NovaVex",
   "RocketLynx",
@@ -87,6 +89,7 @@ let combatPhaseTimeout = null;
 let nextRoundTimeout = null;
 let readyLaunchTimeout = null;
 let aiBuildTimers = [];
+let traitDefinitions = {};
 
 const heroCatalog = [
   { id: "groot", name: "Groot", universe: "marvel", image: "Img/Characters/MarvelRivals/GrootPNG.jpeg", logo: "Img/Icons/MarvelRivalsLogo.png", power: 7, health: 10, cost: 3, tier: 2 },
@@ -185,6 +188,144 @@ async function loadHeroAbilities() {
       hero.ability = null;
     });
   }
+}
+
+async function loadHeroTraits() {
+  try {
+    const response = await fetch(HERO_TRAIT_SOURCE, { cache: "no-store" });
+
+    if (!response.ok) {
+      throw new Error(`Hero trait list returned ${response.status}.`);
+    }
+
+    const traitData = await response.json();
+    traitDefinitions = traitData?.traits || {};
+    const heroTraits = traitData?.heroes || {};
+
+    heroCatalog.forEach((hero) => {
+      hero.traits = Array.isArray(heroTraits[hero.id]) ? heroTraits[hero.id].slice(0, 3) : [];
+    });
+  } catch {
+    traitDefinitions = {};
+    heroCatalog.forEach((hero) => {
+      hero.traits = [];
+    });
+  }
+}
+
+function heroTraitIds(hero) {
+  return Array.isArray(hero?.traits) ? hero.traits.slice(0, 3) : [];
+}
+
+function countTeamTraits(team) {
+  const uniqueHeroesByTrait = new Map();
+
+  team.filter(Boolean).forEach((hero) => {
+    const heroId = heroCatalogId(hero);
+
+    heroTraitIds(hero).forEach((traitId) => {
+      if (!uniqueHeroesByTrait.has(traitId)) {
+        uniqueHeroesByTrait.set(traitId, new Set());
+      }
+
+      uniqueHeroesByTrait.get(traitId).add(heroId);
+    });
+  });
+
+  return new Map(
+    [...uniqueHeroesByTrait].map(([traitId, uniqueHeroIds]) => [traitId, uniqueHeroIds.size]),
+  );
+}
+
+function traitState(traitId, team) {
+  const definition = traitDefinitions[traitId];
+  const count = countTeamTraits(team).get(traitId) || 0;
+  const tiers = definition?.tiers || [];
+  let activeTier = null;
+
+  tiers.forEach((tier) => {
+    if (count >= tier.threshold) {
+      activeTier = tier;
+    }
+  });
+
+  return {
+    id: traitId,
+    definition,
+    count,
+    activeTier,
+    nextTier: tiers.find((tier) => count < tier.threshold) || null,
+  };
+}
+
+function combineCombatEffects(...effectSets) {
+  return effectSets.reduce((combined, effects) => {
+    Object.entries(effects || {}).forEach(([effectName, value]) => {
+      if (typeof value === "number") {
+        combined[effectName] = (combined[effectName] || 0) + value;
+      }
+    });
+    return combined;
+  }, {});
+}
+
+function heroTraitCombatData(hero, team) {
+  const heroTraits = new Set(heroTraitIds(hero));
+  const activeTraits = [...countTeamTraits(team).keys()]
+    .filter((traitId) => heroTraits.has(traitId))
+    .map((traitId) => traitState(traitId, team))
+    .filter((state) => state.activeTier);
+
+  return {
+    effects: combineCombatEffects(...activeTraits.map((state) => state.activeTier.effects)),
+    abilities: activeTraits.map((state) => state.definition.ability),
+    traitIds: activeTraits.map((state) => state.id),
+  };
+}
+
+function traitCategoryLabel(category) {
+  if (category === "world") {
+    return "World";
+  }
+
+  return category === "playstyle" ? "Playstyle" : "Role";
+}
+
+function renderTraitPanel() {
+  const counts = countTeamTraits(gameState.team);
+  const categoryOrder = { world: 0, playstyle: 1, role: 2 };
+  const visibleTraits = [...counts.keys()]
+    .map((traitId) => traitState(traitId, gameState.team))
+    .filter((state) => state.definition)
+    .sort((first, second) => {
+      const categoryDifference = categoryOrder[first.definition.category] - categoryOrder[second.definition.category];
+      return categoryDifference || second.count - first.count || first.definition.name.localeCompare(second.definition.name);
+    });
+
+  if (!visibleTraits.length) {
+    traitListElement.innerHTML = '<span class="trait-list__empty">Deploy a hero to begin building trait synergies.</span>';
+    return;
+  }
+
+  traitListElement.innerHTML = visibleTraits.map((state) => {
+    const { definition, count, activeTier, nextTier } = state;
+    const tierText = activeTier
+      ? `${definition.ability}: ${activeTier.text}`
+      : `Needs ${nextTier.threshold - count} more: ${nextTier.text}`;
+    const milestoneMarkup = definition.tiers.map((tier) => `
+      <i class="${count >= tier.threshold ? "is-reached" : ""}${activeTier?.threshold === tier.threshold ? " is-current" : ""}">${tier.threshold}</i>
+    `).join("");
+
+    return `
+      <article class="trait-item trait-item--${definition.category}${activeTier ? " trait-item--active" : ""}" title="${definition.description}">
+        <span class="trait-item__category">${traitCategoryLabel(definition.category)}</span>
+        <strong class="trait-item__name">${definition.name}</strong>
+        <b class="trait-item__count">${count}</b>
+        <span class="trait-item__milestones">${milestoneMarkup}</span>
+        <small>${tierText}</small>
+      </article>
+    `;
+  }).join("");
 }
 
 function createPlayerInitials(name) {
@@ -675,6 +816,12 @@ function heroInspectContent(hero) {
   const nextMultiplier = LEVEL_STAT_MULTIPLIERS[nextLevel - 1];
   const nextPower = Math.round((hero.basePower ?? hero.power) * nextMultiplier);
   const nextHealth = Math.round((hero.baseHealth ?? hero.health) * nextMultiplier);
+  const traitMarkup = heroTraitIds(hero).map((traitId) => {
+    const trait = traitDefinitions[traitId];
+    return trait
+      ? `<i class="hero-inspect__trait hero-inspect__trait--${trait.category}" title="${trait.ability}: ${trait.description}">${trait.name}</i>`
+      : "";
+  }).join("");
 
   return `
     <span class="hero-inspect__eyebrow">Hero Dossier // Level ${level}</span>
@@ -684,6 +831,7 @@ function heroInspectContent(hero) {
       <i><b>♥</b> ${hero.health} Health</i>
     </span>
     <span class="hero-inspect__level-note">${level >= MAX_HERO_LEVEL ? "Maximum level reached" : `Next: ${nextPower} power / ${nextHealth} health`}</span>
+    <span class="hero-inspect__traits">${traitMarkup}</span>
     <span class="hero-inspect__ability-type">${ability?.type || "Standard"} Ability</span>
     <strong class="hero-inspect__ability-name">${ability?.name || "Standard Attack"}</strong>
     <span class="hero-inspect__description">${ability?.description || "Attacks the enemy directly."}</span>
@@ -693,6 +841,10 @@ function heroInspectContent(hero) {
 function setShopCardHero(card, catalogHero) {
   const shopSlotId = card.dataset.shopId;
   const buyButton = card.querySelector(".shop-card__buy");
+  const traitNames = heroTraitIds(catalogHero)
+    .map((traitId) => traitDefinitions[traitId]?.name)
+    .filter(Boolean)
+    .join(", ");
 
   card.className = `shop-card shop-card--${catalogHero.universe} shop-card--rerolling`;
   card.dataset.heroId = catalogHero.id;
@@ -710,7 +862,7 @@ function setShopCardHero(card, catalogHero) {
   delete card.dataset.suppressClick;
   card.setAttribute(
     "aria-label",
-    `${catalogHero.name}, tier ${catalogHero.tier}, cost ${catalogHero.cost} credits${catalogHero.ability ? `. Ability: ${catalogHero.ability.name}. ${catalogHero.ability.description}` : ""}`,
+    `${catalogHero.name}, tier ${catalogHero.tier}, cost ${catalogHero.cost} credits. Traits: ${traitNames}${catalogHero.ability ? `. Ability: ${catalogHero.ability.name}. ${catalogHero.ability.description}` : ""}`,
   );
 
   const heroImage = card.querySelector("img:not(.universe-badge)");
@@ -845,14 +997,19 @@ function formatBuildTime(seconds) {
   return `${String(minutes).padStart(2, "0")}:${String(remainingSeconds).padStart(2, "0")}`;
 }
 
-function combatHeroMarkup(hero, index) {
+function combatHeroMarkup(hero, index, team) {
   const abilityName = hero.ability?.name || "Standard Attack";
   const level = hero.level || 1;
+  const traitData = heroTraitCombatData(hero, team);
+  const activeTraitNames = traitData.traitIds
+    .map((traitId) => traitDefinitions[traitId]?.name)
+    .filter(Boolean);
 
   return `
     <figure class="combat-unit" data-combat-index="${index}" style="--unit-delay: ${index * 90}ms" title="${abilityName}${hero.ability ? ` — ${hero.ability.description}` : ""}">
       <img src="${hero.image}" alt="${hero.name}">
       <span class="combat-unit__level">LV ${level}</span>
+      ${activeTraitNames.length ? `<span class="combat-unit__traits">${activeTraitNames.join(" · ")}</span>` : ""}
       <span class="combat-unit__health" aria-hidden="true"><i style="width: 100%"></i></span>
       <figcaption><strong>${hero.name}</strong><em>${abilityName}</em><span>✦ ${hero.power} · ♥ ${hero.health}</span></figcaption>
     </figure>
@@ -862,25 +1019,29 @@ function combatHeroMarkup(hero, index) {
 function renderCombatTeam(container, team) {
   const deployedHeroes = team.filter(Boolean);
   container.innerHTML = deployedHeroes.length
-    ? deployedHeroes.map(combatHeroMarkup).join("")
+    ? deployedHeroes.map((hero, index) => combatHeroMarkup(hero, index, team)).join("")
     : "<div class=\"combat-team__empty\">No heroes deployed</div>";
 }
 
 function simulateBattle(firstPlayer, secondPlayer) {
-  const createFighter = (hero) => {
-    const effects = hero.ability?.effects || {};
+  const createFighter = (hero, team) => {
+    const traitData = heroTraitCombatData(hero, team);
+    const effects = combineCombatEffects(hero.ability?.effects, traitData.effects);
     const maxHealth = hero.health + (effects.bonusHealth || 0);
 
     return {
       ...hero,
       power: hero.power + (effects.bonusPower || 0),
+      combatEffects: effects,
+      traitAbilities: traitData.abilities,
+      activeTraitIds: traitData.traitIds,
       maxHealth,
       currentHealth: maxHealth,
       attacksMade: 0,
     };
   };
-  const firstSquad = firstPlayer.team.filter(Boolean).map(createFighter);
-  const secondSquad = secondPlayer.team.filter(Boolean).map(createFighter);
+  const firstSquad = firstPlayer.team.filter(Boolean).map((hero) => createFighter(hero, firstPlayer.team));
+  const secondSquad = secondPlayer.team.filter(Boolean).map((hero) => createFighter(hero, secondPlayer.team));
   const events = [];
 
   if (!firstSquad.length && !secondSquad.length) {
@@ -910,11 +1071,11 @@ function simulateBattle(firstPlayer, secondPlayer) {
   while (firstFront < firstSquad.length && secondFront < secondSquad.length && turns < 180) {
     const attacker = firstAttacks ? firstSquad[firstFront] : secondSquad[secondFront];
     const defender = firstAttacks ? secondSquad[secondFront] : firstSquad[firstFront];
-    const attackerEffects = attacker.ability?.effects || {};
-    const defenderEffects = defender.ability?.effects || {};
+    const attackerEffects = attacker.combatEffects || {};
+    const defenderEffects = defender.combatEffects || {};
     const abilityNames = [];
-    const dodged = Math.random() < (defenderEffects.dodgeChance || 0);
-    const critical = !dodged && Math.random() < (0.14 + (attackerEffects.critChance || 0));
+    const dodged = Math.random() < Math.min(0.65, defenderEffects.dodgeChance || 0);
+    const critical = !dodged && Math.random() < Math.min(0.75, 0.14 + (attackerEffects.critChance || 0));
     const firstStrikeBonus = attacker.attacksMade === 0 ? (attackerEffects.firstStrikeBonus || 0) : 0;
     const executeBonus = defender.currentHealth / defender.maxHealth <= (attackerEffects.executeThreshold || 0)
       ? (attackerEffects.executeBonus || 0)
@@ -924,6 +1085,7 @@ function simulateBattle(firstPlayer, secondPlayer) {
 
     if (dodged) {
       abilityNames.push(defender.ability?.name);
+      abilityNames.push(...defender.traitAbilities);
     } else {
       damage = Math.max(
         1,
@@ -939,6 +1101,7 @@ function simulateBattle(firstPlayer, secondPlayer) {
 
       if (firstStrikeBonus || executeBonus || (critical && attackerEffects.critChance)) {
         abilityNames.push(attacker.ability?.name);
+        abilityNames.push(...attacker.traitAbilities);
       }
     }
 
@@ -955,6 +1118,7 @@ function simulateBattle(firstPlayer, secondPlayer) {
 
       if (healing > 0) {
         abilityNames.push(attacker.ability?.name);
+        abilityNames.push(...attacker.traitAbilities);
       }
     }
 
@@ -962,6 +1126,7 @@ function simulateBattle(firstPlayer, secondPlayer) {
       retaliationDamage = defenderEffects.thorns;
       attacker.currentHealth -= retaliationDamage;
       abilityNames.push(defender.ability?.name);
+      abilityNames.push(...defender.traitAbilities);
     }
 
     if (defenderDefeated && attackerEffects.onKillHeal && attacker.currentHealth > 0) {
@@ -974,6 +1139,7 @@ function simulateBattle(firstPlayer, secondPlayer) {
 
       if (knockoutHealing > 0) {
         abilityNames.push(attacker.ability?.name);
+        abilityNames.push(...attacker.traitAbilities);
       }
     }
 
@@ -1611,6 +1777,7 @@ function renderRosterZone(zone, slots) {
 function renderRoster() {
   renderRosterZone("team", teamSlots);
   renderRosterZone("bench", benchSlots);
+  renderTraitPanel();
   updateHud();
 }
 
@@ -2024,7 +2191,7 @@ closeLeaveModalButtons.forEach((button) => button.addEventListener("click", clos
 document.addEventListener("keydown", handleModalKeyboard);
 
 async function initializeGame() {
-  await Promise.all([assignRandomAiNames(), loadHeroAbilities()]);
+  await Promise.all([assignRandomAiNames(), loadHeroAbilities(), loadHeroTraits()]);
   initializeRandomShop();
   renderRoster();
   startBuildTimer();

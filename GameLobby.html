@@ -95,6 +95,18 @@
         <div class="arena-field__label"><span></span> Deployment Zone <span></span></div>
 
         <div class="deployment-workspace" id="deploymentWorkspace">
+        <section class="trait-panel" aria-labelledby="traitPanelTitle">
+          <header class="trait-panel__header">
+            <div>
+              <p class="kicker"><span>Synergy Matrix</span> // Main board only</p>
+              <h2 id="traitPanelTitle">Active Traits</h2>
+            </div>
+            <p>Deploy unique heroes with matching traits to unlock abilities at <strong>2</strong>, <strong>4</strong>, and <strong>6</strong>. Duplicate heroes count once.</p>
+          </header>
+          <div class="trait-list" id="traitList" aria-live="polite">
+            <span class="trait-list__empty">Deploy a hero to begin building trait synergies.</span>
+          </div>
+        </section>
         <div class="hero-lineup" id="teamBoard" aria-label="Six combat team slots">
           <article class="team-slot roster-slot" data-roster-zone="team" data-slot-index="0" tabindex="0" aria-label="Empty team slot 1">
             <span class="team-slot__number">01</span>
