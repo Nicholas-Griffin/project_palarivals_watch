@@ -47,11 +47,52 @@
     },
   });
 
+  const MAIN_MENU_PLAYLIST = Object.freeze([
+    Object.freeze({
+      ...MUSIC_SCENES.menu,
+      title: "Crossworld Overture",
+      trackSteps: 160,
+    }),
+    Object.freeze({
+      title: "Neon Frontiers",
+      bpm: 96,
+      root: 43,
+      scale: [0, 2, 3, 7, 9, 12],
+      melody: [0, null, 2, 3, null, 5, 4, null, 2, null, 1, 3, 4, null, 2, 1],
+      bass: [0, null, 0, null, 4, null, null, 4, 2, null, 2, null, 3, null, 1, null],
+      pulse: 0.038,
+      pad: 0.019,
+      trackSteps: 160,
+    }),
+    Object.freeze({
+      title: "Triad Protocol",
+      bpm: 108,
+      root: 40,
+      scale: [0, 3, 5, 7, 8, 10, 12],
+      melody: [0, 2, null, 3, 4, null, 2, 5, null, 4, 3, null, 1, 2, 4, null],
+      bass: [0, null, 0, 3, null, 3, null, 4, 0, null, 1, null, 5, null, 3, null],
+      pulse: 0.041,
+      pad: 0.016,
+      trackSteps: 160,
+    }),
+    Object.freeze({
+      title: "Last Light Assembly",
+      bpm: 78,
+      root: 45,
+      scale: [0, 2, 5, 7, 9, 12],
+      melody: [0, null, null, 2, null, 3, 4, null, 5, null, 3, null, 2, 1, null, null],
+      bass: [0, null, null, null, 3, null, null, null, 4, null, null, null, 2, null, 1, null],
+      pulse: 0.028,
+      pad: 0.03,
+      trackSteps: 160,
+    }),
+  ]);
+
   const THEME_VARIANTS = Object.freeze({
-    default: { transpose: 0, wave: "triangle", accentWave: "sawtooth" },
-    marvel: { transpose: 0, wave: "sawtooth", accentWave: "square" },
-    paladins: { transpose: 2, wave: "triangle", accentWave: "sine" },
-    overwatch: { transpose: 5, wave: "square", accentWave: "triangle" },
+    default: { transpose: 0, wave: "triangle", accentWave: "sawtooth", bassWave: "triangle", tempoScale: 1, rhythmGain: 1 },
+    marvel: { transpose: -2, wave: "sawtooth", accentWave: "square", bassWave: "sawtooth", tempoScale: 1.04, rhythmGain: 1.18 },
+    paladins: { transpose: 2, wave: "triangle", accentWave: "sine", bassWave: "triangle", tempoScale: 0.97, rhythmGain: 0.76 },
+    overwatch: { transpose: 5, wave: "square", accentWave: "triangle", bassWave: "sawtooth", tempoScale: 1.07, rhythmGain: 1.3 },
   });
 
   function clamp(value, minimum = 0, maximum = 1) {
@@ -95,6 +136,9 @@
       this.scene = "menu";
       this.theme = "default";
       this.step = 0;
+      this.playlistEnabled = false;
+      this.playlistIndex = 0;
+      this.playlistStep = 0;
       this.nextStepAt = 0;
       this.scheduler = null;
       this.unlocked = false;
@@ -280,18 +324,66 @@
       });
     }
 
+    currentMusicScene() {
+      if (this.playlistEnabled && this.scene === "menu") {
+        return MAIN_MENU_PLAYLIST[this.playlistIndex] || MAIN_MENU_PLAYLIST[0];
+      }
+
+      return MUSIC_SCENES[this.scene] || MUSIC_SCENES.menu;
+    }
+
+    setPlaylist(playlistName) {
+      this.playlistEnabled = playlistName === "main-menu" && this.scene === "menu";
+      this.playlistIndex = 0;
+      this.playlistStep = 0;
+      this.step = 0;
+      this.updateControls();
+    }
+
+    advancePlaylist({ manual = false } = {}) {
+      if (!this.playlistEnabled) {
+        return false;
+      }
+
+      this.playlistIndex = (this.playlistIndex + 1) % MAIN_MENU_PLAYLIST.length;
+      this.playlistStep = 0;
+      this.step = 0;
+
+      if (manual && this.context) {
+        const now = this.context.currentTime;
+        this.nextStepAt = now + 0.1;
+        this.musicBus.gain.cancelScheduledValues(now);
+        this.musicBus.gain.setTargetAtTime(0, now, 0.025);
+        this.musicBus.gain.setTargetAtTime(
+          this.settings.musicEnabled ? this.settings.musicVolume : 0,
+          now + 0.12,
+          0.05,
+        );
+        this.play("themeSwitch");
+      }
+
+      this.updateControls();
+      return true;
+    }
+
     scheduleMusic() {
       if (!this.context || this.context.state !== "running") {
         return;
       }
 
-      const scene = MUSIC_SCENES[this.scene] || MUSIC_SCENES.menu;
-      const secondsPerStep = (60 / scene.bpm) / 4;
-
       while (this.nextStepAt < this.context.currentTime + 0.13) {
+        const scene = this.currentMusicScene();
+        const variant = THEME_VARIANTS[this.theme] || THEME_VARIANTS.default;
+        const tempoScale = this.playlistEnabled ? variant.tempoScale : 1;
+        const secondsPerStep = (60 / (scene.bpm * tempoScale)) / 4;
         this.scheduleMusicStep(scene, this.step, this.nextStepAt, secondsPerStep);
         this.step = (this.step + 1) % 16;
+        this.playlistStep += 1;
         this.nextStepAt += secondsPerStep;
+
+        if (this.playlistEnabled && this.playlistStep >= scene.trackSteps) {
+          this.advancePlaylist();
+        }
       }
     }
 
@@ -321,7 +413,7 @@
           endFrequency: midiToFrequency(bassNote - (this.scene === "combat" ? 5 : 1)),
           duration: stepDuration * 3.1,
           gain: scene.pulse * 1.25,
-          type: "sawtooth",
+          type: this.playlistEnabled ? variant.bassWave : "sawtooth",
           startAt,
           destination: this.musicBus,
           filterFrequency: 460,
@@ -339,6 +431,32 @@
           this.musicBus,
           variant.wave,
         );
+      }
+
+      if (this.playlistEnabled) {
+        if (step % 4 === 0) {
+          this.makeTone({
+            frequency: this.theme === "overwatch" ? 118 : 92,
+            endFrequency: 48,
+            duration: 0.11,
+            gain: 0.026 * variant.rhythmGain,
+            type: "sine",
+            startAt,
+            destination: this.musicBus,
+            filterFrequency: 480,
+          });
+        }
+
+        if (step === 6 || step === 14) {
+          this.makeNoise({
+            duration: this.theme === "paladins" ? 0.08 : 0.045,
+            gain: 0.012 * variant.rhythmGain,
+            startAt,
+            frequency: this.theme === "marvel" ? 2200 : 4200,
+            filterType: this.theme === "paladins" ? "bandpass" : "highpass",
+            destination: this.musicBus,
+          });
+        }
       }
 
       if (this.scene === "build" || this.scene === "combat") {
@@ -386,6 +504,7 @@
 
       this.scene = sceneName;
       this.step = 0;
+      this.playlistStep = 0;
 
       if (this.context) {
         this.nextStepAt = this.context.currentTime + 0.08;
@@ -586,6 +705,10 @@
             <span>Soundtrack // Now Playing</span>
             <strong id="prwAudioTrack">Crossworld Overture</strong>
             <small id="prwAudioStatus">Interact to enable audio</small>
+            <div class="prw-audio-panel__playlist" id="prwAudioPlaylist" hidden>
+              <span id="prwAudioPlaylistPosition">01 / 04</span>
+              <button id="prwAudioNextTrack" type="button">Next track <b aria-hidden="true">&#8594;</b></button>
+            </div>
           </header>
           <div class="prw-audio-panel__row">
             <button id="prwMusicToggle" type="button" aria-pressed="true"><span>Music</span><b>On</b></button>
@@ -604,6 +727,9 @@
         panelToggle: dock.querySelector("#prwAudioPanelToggle"),
         track: dock.querySelector("#prwAudioTrack"),
         status: dock.querySelector("#prwAudioStatus"),
+        playlist: dock.querySelector("#prwAudioPlaylist"),
+        playlistPosition: dock.querySelector("#prwAudioPlaylistPosition"),
+        nextTrack: dock.querySelector("#prwAudioNextTrack"),
         musicToggle: dock.querySelector("#prwMusicToggle"),
         soundToggle: dock.querySelector("#prwSoundToggle"),
         musicVolume: dock.querySelector("#prwMusicVolume"),
@@ -619,6 +745,10 @@
       });
       this.controls.musicToggle.addEventListener("click", () => this.toggleMusic());
       this.controls.soundToggle.addEventListener("click", () => this.toggleSound());
+      this.controls.nextTrack.addEventListener("click", async () => {
+        await this.unlock();
+        this.advancePlaylist({ manual: true });
+      });
       this.controls.musicVolume.addEventListener("input", (event) => this.setMusicVolume(Number(event.target.value) / 100));
       this.controls.soundVolume.addEventListener("input", (event) => this.setSoundVolume(Number(event.target.value) / 100));
       document.addEventListener("keydown", (event) => {
@@ -635,11 +765,15 @@
         return;
       }
 
-      const scene = MUSIC_SCENES[this.scene] || MUSIC_SCENES.menu;
+      const scene = this.currentMusicScene();
+      const variant = THEME_VARIANTS[this.theme] || THEME_VARIANTS.default;
+      const effectiveBpm = Math.round(scene.bpm * (this.playlistEnabled ? variant.tempoScale : 1));
       this.controls.track.textContent = scene.title;
       this.controls.status.textContent = AudioContextClass
-        ? (this.unlocked ? `${this.theme.toUpperCase()} mix // ${scene.bpm} BPM` : "Interact to enable audio")
+        ? (this.unlocked ? `${this.theme.toUpperCase()} mix // ${effectiveBpm} BPM` : "Interact to enable audio")
         : "Web Audio unavailable";
+      this.controls.playlist.hidden = !this.playlistEnabled;
+      this.controls.playlistPosition.textContent = `${String(this.playlistIndex + 1).padStart(2, "0")} / ${String(MAIN_MENU_PLAYLIST.length).padStart(2, "0")}`;
       this.controls.musicToggle.setAttribute("aria-pressed", String(this.settings.musicEnabled));
       this.controls.musicToggle.querySelector("b").textContent = this.settings.musicEnabled ? "On" : "Off";
       this.controls.soundToggle.setAttribute("aria-pressed", String(this.settings.soundEnabled));
@@ -656,6 +790,7 @@
     play: (effectName, options) => engine.play(effectName, options),
     setScene: (sceneName) => engine.setScene(sceneName),
     setTheme: (themeName) => engine.setTheme(themeName),
+    nextTrack: () => engine.advancePlaylist({ manual: true }),
     getSettings: () => ({ ...engine.settings }),
     getStatus: () => ({
       unlocked: engine.unlocked,
@@ -663,6 +798,10 @@
       theme: engine.theme,
       contextState: engine.context?.state || "not-created",
       schedulerActive: Boolean(engine.scheduler),
+      playlistEnabled: engine.playlistEnabled,
+      playlistIndex: engine.playlistIndex,
+      playlistLength: MAIN_MENU_PLAYLIST.length,
+      track: engine.currentMusicScene().title,
     }),
   };
 
@@ -672,7 +811,9 @@
     engine.mountControls();
     const requestedScene = document.body.dataset.audioScene;
     const requestedTheme = document.body.dataset.theme;
+    const requestedPlaylist = document.body.dataset.audioPlaylist;
     engine.setScene(MUSIC_SCENES[requestedScene] ? requestedScene : "menu");
+    engine.setPlaylist(requestedPlaylist);
     engine.setTheme(THEME_VARIANTS[requestedTheme] ? requestedTheme : "default");
 
     const unlockFromGesture = () => engine.unlock();

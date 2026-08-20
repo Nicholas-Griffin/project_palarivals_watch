@@ -150,6 +150,53 @@
   font-size: 0.5rem;
 }
 
+.prw-audio-panel__playlist {
+  display: flex;
+  margin-top: 10px;
+  padding-top: 9px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.prw-audio-panel__playlist[hidden] {
+  display: none;
+}
+
+.prw-audio-panel__playlist > span {
+  color: var(--audio-violet) !important;
+  font-size: 0.48rem !important;
+  letter-spacing: 0.14em !important;
+}
+
+.prw-audio-panel__playlist button {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid rgba(184, 121, 255, 0.28);
+  color: #cbb9ed;
+  background: rgba(184, 121, 255, 0.07);
+  font: inherit;
+  font-size: 0.5rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.prw-audio-panel__playlist button b {
+  margin-left: 5px;
+  color: var(--audio-cyan);
+}
+
+.prw-audio-panel__playlist button:hover,
+.prw-audio-panel__playlist button:focus-visible {
+  border-color: var(--audio-violet);
+  color: white;
+  background: rgba(184, 121, 255, 0.14);
+  outline: none;
+}
+
 .prw-audio-panel__row {
   display: grid;
   grid-template-columns: 84px minmax(0, 1fr);

@@ -60,6 +60,8 @@ const leaveGameButton = document.querySelector("#leaveGameButton");
 const leaveGameModal = document.querySelector("#leaveGameModal");
 const stayInGameButton = document.querySelector("#stayInGameButton");
 const closeLeaveModalButtons = [...document.querySelectorAll("[data-close-leave-modal]")];
+const heroInfoPopover = document.querySelector("#heroInfoPopover");
+const heroInfoPopoverContent = document.querySelector("#heroInfoPopoverContent");
 
 const gameState = {
   credits: Number(creditsElement.textContent),
@@ -185,6 +187,8 @@ const shopHeroes = new Map(
 
 let pointerDrag = null;
 let exitTrigger = null;
+let activeHeroInfoAnchor = null;
+let heroInfoPositionFrame = null;
 
 async function loadHeroAbilities() {
   try {
@@ -876,7 +880,107 @@ function heroInspectContent(hero) {
   `;
 }
 
+function hideHeroInfoPopover() {
+  activeHeroInfoAnchor = null;
+  window.cancelAnimationFrame(heroInfoPositionFrame);
+  heroInfoPositionFrame = null;
+  heroInfoPopover.classList.remove("hero-info-popover--visible");
+  heroInfoPopover.hidden = true;
+  heroInfoPopover.setAttribute("aria-hidden", "true");
+}
+
+function positionHeroInfoPopover() {
+  if (!activeHeroInfoAnchor?.isConnected || heroInfoPopover.hidden) {
+    hideHeroInfoPopover();
+    return;
+  }
+
+  const anchorRect = activeHeroInfoAnchor.getBoundingClientRect();
+  const popoverRect = heroInfoPopover.getBoundingClientRect();
+
+  if (anchorRect.bottom < 0 || anchorRect.top > window.innerHeight || anchorRect.right < 0 || anchorRect.left > window.innerWidth) {
+    hideHeroInfoPopover();
+    return;
+  }
+
+  const viewportPadding = 12;
+  const gap = 14;
+  const availableRight = window.innerWidth - anchorRect.right;
+  const availableLeft = anchorRect.left;
+  const availableTop = anchorRect.top;
+  let placement = "right";
+  let left = anchorRect.right + gap;
+  let top = anchorRect.top + ((anchorRect.height - popoverRect.height) / 2);
+
+  if (availableRight < popoverRect.width + gap && availableLeft >= popoverRect.width + gap) {
+    placement = "left";
+    left = anchorRect.left - popoverRect.width - gap;
+  } else if (availableRight < popoverRect.width + gap && availableLeft < popoverRect.width + gap) {
+    if (availableTop >= popoverRect.height + gap) {
+      placement = "top";
+      left = anchorRect.left + ((anchorRect.width - popoverRect.width) / 2);
+      top = anchorRect.top - popoverRect.height - gap;
+    } else {
+      placement = "bottom";
+      left = anchorRect.left + ((anchorRect.width - popoverRect.width) / 2);
+      top = anchorRect.bottom + gap;
+    }
+  }
+
+  left = Math.min(
+    window.innerWidth - popoverRect.width - viewportPadding,
+    Math.max(viewportPadding, left),
+  );
+  top = Math.min(
+    window.innerHeight - popoverRect.height - viewportPadding,
+    Math.max(viewportPadding, top),
+  );
+
+  heroInfoPopover.dataset.placement = placement;
+  heroInfoPopover.style.left = `${Math.round(left)}px`;
+  heroInfoPopover.style.top = `${Math.round(top)}px`;
+}
+
+function queueHeroInfoPosition() {
+  window.cancelAnimationFrame(heroInfoPositionFrame);
+  heroInfoPositionFrame = window.requestAnimationFrame(() => {
+    heroInfoPositionFrame = null;
+    positionHeroInfoPopover();
+  });
+}
+
+function showHeroInfoPopover(anchor) {
+  const source = anchor?.querySelector(".hero-inspect");
+
+  if (!source || window.matchMedia("(hover: none) and (pointer: coarse)").matches) {
+    return;
+  }
+
+  activeHeroInfoAnchor = anchor;
+  heroInfoPopoverContent.innerHTML = source.innerHTML;
+  heroInfoPopover.style.setProperty(
+    "--accent",
+    getComputedStyle(anchor).getPropertyValue("--accent").trim() || "#5fe7ff",
+  );
+  heroInfoPopover.hidden = false;
+  heroInfoPopover.setAttribute("aria-hidden", "false");
+  heroInfoPopover.classList.remove("hero-info-popover--visible");
+  positionHeroInfoPopover();
+  window.requestAnimationFrame(() => {
+    heroInfoPopover.classList.add("hero-info-popover--visible");
+    window.requestAnimationFrame(positionHeroInfoPopover);
+  });
+}
+
+function closestHeroInfoCard(target) {
+  return target instanceof Element ? target.closest(".shop-card, .hero-card") : null;
+}
+
 function setShopCardHero(card, catalogHero) {
+  if (activeHeroInfoAnchor === card) {
+    hideHeroInfoPopover();
+  }
+
   const shopSlotId = card.dataset.shopId;
   const buyButton = card.querySelector(".shop-card__buy");
   const traitNames = heroTraitIds(catalogHero)
@@ -1095,11 +1199,26 @@ function renderCombatTeam(container, team) {
     : "<div class=\"combat-team__empty\">No heroes deployed</div>";
 }
 
+function combatBuffIndicators(effects = {}) {
+  const indicators = [];
+
+  if (effects.bonusPower) indicators.push({ type: "power", text: `+${effects.bonusPower} POWER` });
+  if (effects.bonusHealth) indicators.push({ type: "health", text: `+${effects.bonusHealth} MAX HP` });
+  if (effects.critChance) indicators.push({ type: "critical", text: `+${Math.round(effects.critChance * 100)}% CRIT` });
+  if (effects.dodgeChance) indicators.push({ type: "dodge", text: `+${Math.round(effects.dodgeChance * 100)}% EVADE` });
+  if (effects.damageReduction) indicators.push({ type: "guard", text: `-${effects.damageReduction} DMG TAKEN` });
+  if (effects.lifesteal) indicators.push({ type: "healing", text: `${Math.round(effects.lifesteal * 100)}% LIFESTEAL` });
+  if (effects.thorns) indicators.push({ type: "retaliation", text: `${effects.thorns} REFLECT` });
+
+  return indicators;
+}
+
 function simulateBattle(firstPlayer, secondPlayer) {
   const createFighter = (hero, team) => {
     const traitData = heroTraitCombatData(hero, team);
     const effects = combineCombatEffects(hero.ability?.effects, traitData.effects);
     const maxHealth = hero.health + (effects.bonusHealth || 0);
+    const openingBuffs = combatBuffIndicators(effects);
 
     return {
       ...hero,
@@ -1110,11 +1229,29 @@ function simulateBattle(firstPlayer, secondPlayer) {
       maxHealth,
       currentHealth: maxHealth,
       attacksMade: 0,
+      openingBuffs,
+      openingBuffSources: [hero.ability?.name, ...traitData.abilities].filter(Boolean),
     };
   };
   const firstSquad = firstPlayer.team.filter(Boolean).map((hero) => createFighter(hero, firstPlayer.team));
   const secondSquad = secondPlayer.team.filter(Boolean).map((hero) => createFighter(hero, secondPlayer.team));
   const events = [];
+  const openingBuffs = {
+    first: firstSquad.map((hero) => ({
+      name: hero.name,
+      power: hero.power,
+      maxHealth: hero.maxHealth,
+      indicators: hero.openingBuffs,
+      sources: hero.openingBuffSources,
+    })),
+    second: secondSquad.map((hero) => ({
+      name: hero.name,
+      power: hero.power,
+      maxHealth: hero.maxHealth,
+      indicators: hero.openingBuffs,
+      sources: hero.openingBuffSources,
+    })),
+  };
 
   if (!firstSquad.length && !secondSquad.length) {
     const firstWins = Math.random() >= 0.5;
@@ -1123,6 +1260,7 @@ function simulateBattle(firstPlayer, secondPlayer) {
       loser: firstWins ? secondPlayer : firstPlayer,
       survivors: 0,
       events,
+      openingBuffs,
     };
   }
 
@@ -1132,6 +1270,7 @@ function simulateBattle(firstPlayer, secondPlayer) {
       loser: firstSquad.length ? secondPlayer : firstPlayer,
       survivors: Math.max(firstSquad.length, secondSquad.length),
       events,
+      openingBuffs,
     };
   }
 
@@ -1275,6 +1414,7 @@ function simulateBattle(firstPlayer, secondPlayer) {
     loser: firstWon ? secondPlayer : firstPlayer,
     survivors: winningSquad.filter((hero) => hero.currentHealth > 0).length,
     events,
+    openingBuffs,
   };
 }
 
@@ -1341,6 +1481,52 @@ function spawnFloatingCombatText(unit, text, variant) {
   floatingText.style.top = `${point.y}px`;
   combatFxLayer.append(floatingText);
   removeCombatEffect(floatingText, 900);
+}
+
+function showCombatOpeningBuffs(result) {
+  const buffEntries = ["first", "second"].flatMap((side) => (
+    (result?.openingBuffs?.[side] || []).map((buff, unitIndex) => ({ side, unitIndex, buff }))
+  )).filter(({ buff }) => buff.indicators.length);
+
+  if (!buffEntries.length) {
+    return false;
+  }
+
+  combatFeed.innerHTML = "<strong>Passives online.</strong> Hero abilities and active traits are enhancing combat stats.";
+  window.PRWAudio?.play("upgrade");
+
+  buffEntries.forEach(({ side, unitIndex, buff }, entryIndex) => {
+    const unit = getCombatUnit(side, unitIndex, result);
+
+    if (!unit) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      const statLine = unit.querySelector("figcaption > span");
+      const buffStack = document.createElement("span");
+      const sourceLabel = [...new Set(buff.sources)].slice(0, 2).join(" + ");
+
+      buffStack.className = "combat-unit__buff-stack";
+      buffStack.innerHTML = `
+        ${sourceLabel ? `<small>${sourceLabel}</small>` : ""}
+        ${buff.indicators.map((indicator) => `<b class="combat-unit__buff combat-unit__buff--${indicator.type}">${indicator.text}</b>`).join("")}
+      `;
+      unit.querySelector(".combat-unit__buff-stack")?.remove();
+      unit.append(buffStack);
+      unit.classList.add("combat-unit--buffed");
+      setCombatUnitHealth(unit, buff.maxHealth, buff.maxHealth);
+
+      if (statLine) {
+        statLine.innerHTML = `<i class="combat-unit__power-stat">✦ ${buff.power}</i><i class="combat-unit__health-stat">♥ ${buff.maxHealth}</i>`;
+      }
+
+      window.setTimeout(() => unit.classList.remove("combat-unit--buffed"), 1050);
+      removeCombatEffect(buffStack, 1350);
+    }, entryIndex * 90);
+  });
+
+  return true;
 }
 
 function spawnCombatProjectile(attackerUnit, defenderUnit, combatEvent) {
@@ -1597,7 +1783,11 @@ function startCombatPhase() {
   const humanResult = gameState.combatResults.find(
     (result) => result.winner.isHuman || result.loser.isHuman,
   );
-  combatPhaseTimeout = window.setTimeout(() => playCombatEvents(humanResult), 700);
+  const hasOpeningBuffs = showCombatOpeningBuffs(humanResult);
+  combatPhaseTimeout = window.setTimeout(
+    () => playCombatEvents(humanResult),
+    hasOpeningBuffs ? 1550 : 700,
+  );
 }
 
 function resolveCombatPhase() {
@@ -1730,6 +1920,7 @@ function finishBuildPhase() {
 
   gameState.buildPhaseActive = false;
   gameState.phase = "build-complete";
+  hideHeroInfoPopover();
   window.clearTimeout(readyLaunchTimeout);
   readyLaunchTimeout = null;
   gameState.selectedShopId = null;
@@ -2100,6 +2291,7 @@ function renderRosterZone(zone, slots) {
 }
 
 function renderRoster() {
+  hideHeroInfoPopover();
   renderRosterZone("team", teamSlots);
   renderRosterZone("bench", benchSlots);
   renderTraitPanel();
@@ -2509,6 +2701,52 @@ rosterSlots.forEach((slot) => {
       deployPurchasedHeroToRoster(gameState.selectedShopId, zone, slotIndex);
     }
   });
+});
+
+document.addEventListener("pointerover", (event) => {
+  const card = closestHeroInfoCard(event.target);
+
+  if (card && !card.contains(event.relatedTarget)) {
+    showHeroInfoPopover(card);
+  }
+});
+
+document.addEventListener("pointerout", (event) => {
+  const card = closestHeroInfoCard(event.target);
+
+  if (card && !card.contains(event.relatedTarget) && !card.contains(document.activeElement)) {
+    hideHeroInfoPopover();
+  }
+});
+
+document.addEventListener("focusin", (event) => {
+  const card = closestHeroInfoCard(event.target);
+
+  if (card) {
+    showHeroInfoPopover(card);
+  }
+});
+
+document.addEventListener("focusout", (event) => {
+  const card = closestHeroInfoCard(event.target);
+
+  if (!card) {
+    return;
+  }
+
+  window.setTimeout(() => {
+    if (!card.contains(document.activeElement) && activeHeroInfoAnchor === card) {
+      hideHeroInfoPopover();
+    }
+  }, 0);
+});
+
+window.addEventListener("scroll", queueHeroInfoPosition, { passive: true, capture: true });
+window.addEventListener("resize", queueHeroInfoPosition, { passive: true });
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    hideHeroInfoPopover();
+  }
 });
 
 rerollButton.addEventListener("click", rerollShop);
