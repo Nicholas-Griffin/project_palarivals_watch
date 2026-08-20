@@ -7,6 +7,7 @@
   <title>Game Lobby | PalaRivals Watch</title>
   <meta name="description" content="Hero deployment lobby for PalaRivals Watch.">
   <link rel="stylesheet" href="css/game/GameLobby.css">
+  <link rel="stylesheet" href="css/shared/Audio.css">
   <script>
     window.va = window.va || function () {
       (window.vaq = window.vaq || []).push(arguments);
@@ -15,7 +16,7 @@
   <script defer src="/_vercel/insights/script.js"></script>
 </head>
 
-<body class="lobby-v2">
+<body class="lobby-v2" data-audio-scene="build">
   <div class="ambient-scene" aria-hidden="true">
     <span class="ambient-scene__flare ambient-scene__flare--cyan"></span>
     <span class="ambient-scene__flare ambient-scene__flare--violet"></span>
@@ -161,23 +162,51 @@
 
         <section class="combat-arena" id="combatArena" aria-labelledby="combatTitle" hidden>
           <div class="combat-arena__header">
+            <div class="combat-broadcast">
+              <span class="combat-broadcast__live"><i></i> Live Combat</span>
+              <b id="combatRoundBadge">Round 01</b>
+            </div>
             <p class="kicker"><span>Auto Combat</span> // Live Engagement</p>
             <h2 id="combatTitle">Battle Initiated</h2>
+            <div class="combat-event-meter" aria-label="Combat event counter">
+              <span>Engagement</span>
+              <strong id="combatEventCounter">00</strong>
+              <i><b id="combatEventProgress"></b></i>
+            </div>
           </div>
           <div class="combat-matchup">
+            <div class="combat-fx-layer" id="combatFxLayer" aria-hidden="true"></div>
             <article class="combat-side combat-side--player">
-              <span class="combat-side__label">Your Squad</span>
-              <h3>You</h3>
+              <header class="combat-side__header">
+                <div>
+                  <span class="combat-side__label">Your Squad</span>
+                  <h3>You</h3>
+                </div>
+                <span class="combat-side__status"><b id="playerCombatRemaining">0</b> Active</span>
+              </header>
               <div class="combat-team" id="playerCombatTeam"></div>
             </article>
-            <div class="combat-versus" aria-hidden="true"><span>VS</span></div>
+            <div class="combat-versus" aria-hidden="true">
+              <span><small>Engage</small><b>VS</b><i></i></span>
+            </div>
             <article class="combat-side combat-side--enemy">
-              <span class="combat-side__label">Enemy Squad</span>
-              <h3 id="enemyCombatName">Opponent</h3>
+              <header class="combat-side__header">
+                <div>
+                  <span class="combat-side__label">Enemy Squad</span>
+                  <h3 id="enemyCombatName">Opponent</h3>
+                </div>
+                <span class="combat-side__status"><b id="enemyCombatRemaining">0</b> Active</span>
+              </header>
               <div class="combat-team" id="enemyCombatTeam"></div>
             </article>
           </div>
           <div class="combat-feed" id="combatFeed" role="status" aria-live="polite">Scanning enemy formation…</div>
+          <div class="combat-timeline" id="combatTimeline" aria-label="Recent combat events"></div>
+          <div class="combat-round-result" id="combatRoundResult" hidden aria-hidden="true">
+            <small id="combatRoundResultKicker">Round Complete</small>
+            <strong id="combatRoundResultTitle">Victory</strong>
+            <span id="combatRoundResultDetail">Enemy squad neutralized</span>
+          </div>
         </section>
       </div>
     </section>
@@ -362,6 +391,7 @@
     </section>
   </div>
 
+  <script src="js/shared/AudioManager.js"></script>
   <script src="js/game/GameLobby.js"></script>
 </body>
 </html>

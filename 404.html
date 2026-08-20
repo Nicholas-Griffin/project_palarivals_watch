@@ -11,6 +11,7 @@
   </script>
   <script defer src="/_vercel/insights/script.js"></script>
   <title>Signal Lost | PalaRivals Watch</title>
+  <link rel="stylesheet" href="/css/shared/Audio.css">
   <style>
     :root { color-scheme: dark; font-family: "Arial Narrow", Arial, sans-serif; }
     * { box-sizing: border-box; }
@@ -58,13 +59,14 @@
     a:hover, a:focus-visible { filter: brightness(1.12); outline: none; transform: translateY(-3px); }
   </style>
 </head>
-<body>
+<body data-audio-scene="menu">
   <main>
     <small>Navigation failure // 404</small>
     <h1>Signal Lost</h1>
     <p>This route is outside the combat network.</p>
     <a id="MainMenuReturn" href="Main.html">Return to Main Menu</a>
   </main>
+  <script src="/js/shared/AudioManager.js"></script>
   <script>
     const mainMenuReturn = document.getElementById("MainMenuReturn");
     const isLocalPreview = location.protocol === "file:"

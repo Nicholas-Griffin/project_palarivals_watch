@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PalaRivals Watch Profile</title>
   <link rel="stylesheet" href="css/profile/Profile.css">
+  <link rel="stylesheet" href="css/shared/Audio.css">
   <meta name="description" content="Profile Page for PalaRivals Watch.">
   <script>
     window.va = window.va || function () {
@@ -15,7 +16,7 @@
   <script defer src="/_vercel/insights/script.js"></script>
 </head>
 
-<body class="profile-page">
+<body class="profile-page" data-audio-scene="profile">
   <div class="profile-backdrop" aria-hidden="true">
     <span class="profile-backdrop__grid"></span>
     <span class="profile-backdrop__glow profile-backdrop__glow--cyan"></span>
@@ -89,6 +90,7 @@
     <p>Fan-made project. Characters belong to NetEase Games, Blizzard Entertainment, and Hi-Rez Studios.</p>
   </footer>
 
+  <script src="js/shared/AudioManager.js"></script>
   <script src="js/profile/Profile.js"></script>
 </body>
 </html>

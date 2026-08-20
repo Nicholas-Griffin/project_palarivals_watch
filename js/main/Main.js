@@ -102,6 +102,7 @@ function applyTheme(themeName, { animate = true } = {}) {
   }
 
   body.dataset.theme = themeName;
+  window.PRWAudio?.setTheme(themeName);
   themeCode.textContent = theme.code;
   themeStatus.textContent = theme.status;
   themeEyebrow.textContent = theme.eyebrow;

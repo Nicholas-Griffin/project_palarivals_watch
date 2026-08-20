@@ -29,6 +29,17 @@ const playerCombatTeam = document.querySelector("#playerCombatTeam");
 const enemyCombatTeam = document.querySelector("#enemyCombatTeam");
 const enemyCombatName = document.querySelector("#enemyCombatName");
 const combatFeed = document.querySelector("#combatFeed");
+const combatFxLayer = document.querySelector("#combatFxLayer");
+const combatTimeline = document.querySelector("#combatTimeline");
+const combatRoundBadge = document.querySelector("#combatRoundBadge");
+const combatEventCounter = document.querySelector("#combatEventCounter");
+const combatEventProgress = document.querySelector("#combatEventProgress");
+const playerCombatRemaining = document.querySelector("#playerCombatRemaining");
+const enemyCombatRemaining = document.querySelector("#enemyCombatRemaining");
+const combatRoundResult = document.querySelector("#combatRoundResult");
+const combatRoundResultKicker = document.querySelector("#combatRoundResultKicker");
+const combatRoundResultTitle = document.querySelector("#combatRoundResultTitle");
+const combatRoundResultDetail = document.querySelector("#combatRoundResultDetail");
 const playerListElement = document.querySelector("#playerList");
 const onlineCountElement = document.querySelector("#onlineCount");
 const nextThreatNameElement = document.querySelector("#nextThreatName");
@@ -65,7 +76,7 @@ const MAX_HERO_LEVEL = 4;
 const LEVEL_STAT_MULTIPLIERS = [1, 1.5, 2.25, 3.25];
 const SHOP_UPGRADE_COSTS = { 1: 4, 2: 6, 3: 8 };
 const BUILD_PHASE_DURATION = 60_000;
-const COMBAT_EVENT_DURATION = 620;
+const COMBAT_EVENT_DURATION = 780;
 const COMBAT_RESULT_DURATION = 6_000;
 const AI_NAME_SOURCE = "data/ai-names.json";
 const HERO_ABILITY_SOURCE = "data/hero-abilities.json";
@@ -410,6 +421,7 @@ function openLeaveGameModal(trigger) {
   exitTrigger = trigger;
   leaveGameModal.hidden = false;
   document.body.classList.add("modal-open");
+  window.PRWAudio?.play("modalOpen");
   stayInGameButton.focus();
   announce("Leave game confirmation opened.");
 }
@@ -417,6 +429,7 @@ function openLeaveGameModal(trigger) {
 function closeLeaveGameModal() {
   leaveGameModal.hidden = true;
   document.body.classList.remove("modal-open");
+  window.PRWAudio?.play("modalClose");
   exitTrigger?.focus();
   exitTrigger = null;
   announce("Leave game cancelled.");
@@ -514,6 +527,7 @@ function toggleHumanReady() {
 
   const humanPlayer = getHumanPlayer();
   humanPlayer.ready = !humanPlayer.ready;
+  window.PRWAudio?.play(humanPlayer.ready ? "ready" : "unready");
   renderReadyButton();
   renderLeaderboard();
   announce(humanPlayer.ready ? "You are ready for combat." : "Ready status cancelled.");
@@ -937,16 +951,19 @@ function rerollShop() {
   const refreshableCards = shopCards.filter((card) => card.dataset.status !== "purchased");
 
   if (!gameState.buildPhaseActive) {
+    window.PRWAudio?.play("error");
     announce("The build phase has ended.");
     return;
   }
 
   if (gameState.credits < 1) {
+    window.PRWAudio?.play("error");
     announce("You need 1 credit to reroll the shop.");
     return;
   }
 
   if (!refreshableCards.length) {
+    window.PRWAudio?.play("error");
     announce("Deploy a purchased hero before rerolling its shop slot.");
     return;
   }
@@ -959,17 +976,20 @@ function rerollShop() {
   markHumanNotReady();
   gameState.credits -= 1;
   refreshableCards.forEach((card, index) => setShopCardHero(card, newHeroes[index]));
+  window.PRWAudio?.play("reroll");
   updateHud();
   announce(`Shop rerolled for 1 credit. ${refreshableCards.length} new heroes available.`);
 }
 
 function upgradeShopTier() {
   if (!gameState.buildPhaseActive) {
+    window.PRWAudio?.play("error");
     announce("The build phase has ended.");
     return;
   }
 
   if (gameState.shopTier >= MAX_SHOP_TIER) {
+    window.PRWAudio?.play("error");
     announce("The shop is already at maximum tier.");
     return;
   }
@@ -977,6 +997,7 @@ function upgradeShopTier() {
   const upgradeCost = SHOP_UPGRADE_COSTS[gameState.shopTier];
 
   if (gameState.credits < upgradeCost) {
+    window.PRWAudio?.play("error");
     upgradeShopButton.classList.remove("upgrade-button--denied");
     void upgradeShopButton.offsetWidth;
     upgradeShopButton.classList.add("upgrade-button--denied");
@@ -987,6 +1008,7 @@ function upgradeShopTier() {
   markHumanNotReady();
   gameState.credits -= upgradeCost;
   gameState.shopTier += 1;
+  window.PRWAudio?.play("upgrade");
   updateHud();
   announce(`Shop upgraded to tier ${gameState.shopTier}. Stronger heroes can now appear on rerolls.`);
 }
@@ -1006,11 +1028,13 @@ function combatHeroMarkup(hero, index, team) {
     .filter(Boolean);
 
   return `
-    <figure class="combat-unit" data-combat-index="${index}" style="--unit-delay: ${index * 90}ms" title="${abilityName}${hero.ability ? ` — ${hero.ability.description}` : ""}">
-      <img src="${hero.image}" alt="${hero.name}">
+    <figure class="combat-unit" data-combat-index="${index}" data-hero-name="${hero.name}" style="--unit-delay: ${index * 90}ms" title="${abilityName}${hero.ability ? ` — ${hero.ability.description}` : ""}">
+      <span class="combat-unit__portrait"><img src="${hero.image}" alt="${hero.name}"><i></i></span>
       <span class="combat-unit__level">LV ${level}</span>
       ${activeTraitNames.length ? `<span class="combat-unit__traits">${activeTraitNames.join(" · ")}</span>` : ""}
-      <span class="combat-unit__health" aria-hidden="true"><i style="width: 100%"></i></span>
+      <span class="combat-unit__health" aria-label="${hero.health} health"><i style="width: 100%"></i><b>${hero.health}</b></span>
+      <span class="combat-unit__charge" aria-hidden="true"><i></i></span>
+      <span class="combat-unit__reticle" aria-hidden="true"><i></i></span>
       <figcaption><strong>${hero.name}</strong><em>${abilityName}</em><span>✦ ${hero.power} · ♥ ${hero.health}</span></figcaption>
     </figure>
   `;
@@ -1210,9 +1234,200 @@ function calculateCombatDamage(survivors) {
   return Math.min(35, 8 + (gameState.round * 2) + (survivors * 3));
 }
 
-function getCombatUnit(side, unitIndex) {
-  const teamContainer = side === "first" ? playerCombatTeam : enemyCombatTeam;
+function getCombatUnit(side, unitIndex, result) {
+  const humanPlayerId = getHumanPlayer().id;
+  const firstSideIsHuman = result?.firstPlayerId
+    ? result.firstPlayerId === humanPlayerId
+    : true;
+  const eventSideIsHuman = side === "first" ? firstSideIsHuman : !firstSideIsHuman;
+  const teamContainer = eventSideIsHuman ? playerCombatTeam : enemyCombatTeam;
   return teamContainer.querySelector(`[data-combat-index="${unitIndex}"]`);
+}
+
+function setCombatUnitHealth(unit, currentHealth, maxHealth) {
+  const healthBar = unit?.querySelector(".combat-unit__health i");
+  const healthValue = unit?.querySelector(".combat-unit__health b");
+  const healthContainer = unit?.querySelector(".combat-unit__health");
+  const safeCurrentHealth = Math.max(0, currentHealth);
+  const healthPercent = maxHealth > 0 ? (safeCurrentHealth / maxHealth) * 100 : 0;
+
+  if (healthBar) {
+    healthBar.style.width = `${healthPercent}%`;
+  }
+
+  if (healthValue) {
+    healthValue.textContent = Math.ceil(safeCurrentHealth);
+  }
+
+  if (healthContainer) {
+    healthContainer.setAttribute("aria-label", `${Math.ceil(safeCurrentHealth)} of ${maxHealth} health`);
+  }
+
+  unit?.classList.toggle("combat-unit--danger", healthPercent > 0 && healthPercent <= 30);
+}
+
+function combatEffectPoint(unit) {
+  const layerBounds = combatFxLayer.getBoundingClientRect();
+  const unitBounds = unit.getBoundingClientRect();
+
+  return {
+    x: unitBounds.left - layerBounds.left + (unitBounds.width / 2),
+    y: unitBounds.top - layerBounds.top + (unitBounds.height / 2),
+  };
+}
+
+function removeCombatEffect(effect, delay = COMBAT_EVENT_DURATION) {
+  window.setTimeout(() => effect.remove(), delay);
+}
+
+function spawnFloatingCombatText(unit, text, variant) {
+  if (!unit || !combatFxLayer) {
+    return;
+  }
+
+  const point = combatEffectPoint(unit);
+  const floatingText = document.createElement("span");
+  floatingText.className = `combat-floating-text combat-floating-text--${variant}`;
+  floatingText.textContent = text;
+  floatingText.style.left = `${point.x}px`;
+  floatingText.style.top = `${point.y}px`;
+  combatFxLayer.append(floatingText);
+  removeCombatEffect(floatingText, 900);
+}
+
+function spawnCombatProjectile(attackerUnit, defenderUnit, combatEvent) {
+  if (!attackerUnit || !defenderUnit || !combatFxLayer) {
+    return;
+  }
+
+  const origin = combatEffectPoint(attackerUnit);
+  const target = combatEffectPoint(defenderUnit);
+  const travelX = target.x - origin.x;
+  const travelY = target.y - origin.y;
+  const projectile = document.createElement("span");
+  const impact = document.createElement("span");
+  const projectileType = combatEvent.abilityNames.length
+    ? "ability"
+    : (combatEvent.critical ? "critical" : "standard");
+
+  projectile.className = `combat-projectile combat-projectile--${projectileType}`;
+  projectile.style.left = `${origin.x}px`;
+  projectile.style.top = `${origin.y}px`;
+  projectile.style.setProperty("--travel-x", `${travelX}px`);
+  projectile.style.setProperty("--travel-y", `${travelY}px`);
+  projectile.style.setProperty("--projectile-angle", `${Math.atan2(travelY, travelX)}rad`);
+  projectile.innerHTML = "<i></i>";
+
+  impact.className = `combat-impact-burst combat-impact-burst--${combatEvent.dodged ? "miss" : projectileType}`;
+  impact.style.left = `${target.x}px`;
+  impact.style.top = `${target.y}px`;
+  impact.innerHTML = "<i></i><i></i><i></i>";
+
+  combatFxLayer.append(projectile, impact);
+  removeCombatEffect(projectile, 850);
+  removeCombatEffect(impact, 900);
+}
+
+function showCombatAbilityCallout(combatEvent) {
+  if (!combatEvent.abilityNames.length || !combatFxLayer) {
+    return;
+  }
+
+  const abilityCallout = document.createElement("div");
+  abilityCallout.className = "combat-ability-callout";
+  abilityCallout.innerHTML = `
+    <small>Ability Proc</small>
+    <strong>${combatEvent.abilityNames.slice(0, 2).join(" + ")}</strong>
+  `;
+  combatFxLayer.append(abilityCallout);
+  removeCombatEffect(abilityCallout, 920);
+}
+
+function addCombatTimelineEntry(combatEvent, eventIndex) {
+  const eventType = combatEvent.dodged
+    ? "dodge"
+    : (combatEvent.defeated ? "knockout" : (combatEvent.critical ? "critical" : "hit"));
+  const resultText = combatEvent.dodged
+    ? "Evaded"
+    : (combatEvent.defeated ? "Knockout" : `${combatEvent.damage} damage`);
+  const timelineEntry = document.createElement("article");
+
+  timelineEntry.className = `combat-timeline__entry combat-timeline__entry--${eventType}`;
+  timelineEntry.innerHTML = `
+    <b>${String(eventIndex + 1).padStart(2, "0")}</b>
+    <span><strong>${combatEvent.attackerName}</strong><i>${resultText}</i></span>
+    <em>${combatEvent.defenderName}</em>
+  `;
+  combatTimeline.prepend(timelineEntry);
+
+  while (combatTimeline.children.length > 5) {
+    combatTimeline.lastElementChild.remove();
+  }
+}
+
+function updateCombatRemainingCounts() {
+  playerCombatRemaining.textContent = playerCombatTeam.querySelectorAll(".combat-unit:not(.combat-unit--defeated)").length;
+  enemyCombatRemaining.textContent = enemyCombatTeam.querySelectorAll(".combat-unit:not(.combat-unit--defeated)").length;
+}
+
+function playCombatMoment(combatEvent, attackerUnit, defenderUnit, eventIndex, totalEvents) {
+  const chargeBar = attackerUnit?.querySelector(".combat-unit__charge i");
+  const eventProgress = totalEvents > 0 ? ((eventIndex + 1) / totalEvents) * 100 : 100;
+
+  combatEventCounter.textContent = String(eventIndex + 1).padStart(2, "0");
+  combatEventProgress.style.width = `${eventProgress}%`;
+  combatArena.style.setProperty("--combat-progress", `${eventProgress}%`);
+
+  if (chargeBar) {
+    chargeBar.style.width = combatEvent.abilityNames.length
+      ? "100%"
+      : `${Math.min(92, 24 + ((eventIndex % 4) * 22))}%`;
+  }
+
+  attackerUnit?.classList.toggle("combat-unit--ability", combatEvent.abilityNames.length > 0);
+  defenderUnit?.classList.add("combat-unit--targeted");
+
+  if (combatEvent.dodged) {
+    window.PRWAudio?.play("dodge");
+  } else if (combatEvent.defeated || combatEvent.attackerDefeated) {
+    window.PRWAudio?.play("knockout");
+  } else {
+    window.PRWAudio?.play(combatEvent.critical ? "critical" : "attack", { critical: combatEvent.critical });
+  }
+
+  if (combatEvent.healing) {
+    window.PRWAudio?.play("heal");
+  }
+
+  spawnCombatProjectile(attackerUnit, defenderUnit, combatEvent);
+  showCombatAbilityCallout(combatEvent);
+  addCombatTimelineEntry(combatEvent, eventIndex);
+
+  if (combatEvent.dodged) {
+    spawnFloatingCombatText(defenderUnit, "EVADE", "dodge");
+  } else {
+    const damagePrefix = combatEvent.critical ? "CRIT " : "";
+    spawnFloatingCombatText(
+      defenderUnit,
+      `${damagePrefix}-${combatEvent.damage}`,
+      combatEvent.defeated ? "knockout" : (combatEvent.critical ? "critical" : "damage"),
+    );
+  }
+
+  if (combatEvent.healing) {
+    attackerUnit?.classList.add("combat-unit--healing");
+    spawnFloatingCombatText(attackerUnit, `+${combatEvent.healing}`, "healing");
+  }
+
+  if (combatEvent.retaliationDamage) {
+    spawnFloatingCombatText(attackerUnit, `-${combatEvent.retaliationDamage} REFLECT`, "retaliation");
+  }
+
+  combatArena.classList.remove("combat-arena--impact", "combat-arena--heavy-impact");
+  void combatArena.offsetWidth;
+  combatArena.classList.add(
+    combatEvent.critical || combatEvent.defeated ? "combat-arena--heavy-impact" : "combat-arena--impact",
+  );
 }
 
 function playCombatEvents(result, eventIndex = 0) {
@@ -1223,32 +1438,31 @@ function playCombatEvents(result, eventIndex = 0) {
   const combatEvent = result?.events[eventIndex];
 
   if (!combatEvent) {
+    combatEventProgress.style.width = "100%";
+    combatArena.classList.add("combat-arena--finalizing");
     combatFeed.textContent = "Final strike confirmed. Calculating battle damage…";
-    combatPhaseTimeout = window.setTimeout(resolveCombatPhase, 850);
+    combatPhaseTimeout = window.setTimeout(resolveCombatPhase, 1100);
     return;
   }
 
-  combatArena.querySelectorAll(".combat-unit--attacking, .combat-unit--hit, .combat-unit--dodged").forEach((unit) => {
-    unit.classList.remove("combat-unit--attacking", "combat-unit--hit", "combat-unit--dodged");
+  combatArena.querySelectorAll(".combat-unit--attacking, .combat-unit--hit, .combat-unit--dodged, .combat-unit--ability, .combat-unit--healing, .combat-unit--targeted").forEach((unit) => {
+    unit.classList.remove(
+      "combat-unit--attacking",
+      "combat-unit--hit",
+      "combat-unit--dodged",
+      "combat-unit--ability",
+      "combat-unit--healing",
+      "combat-unit--targeted",
+    );
   });
 
-  const attackerUnit = getCombatUnit(combatEvent.attackerSide, combatEvent.attackerIndex);
-  const defenderUnit = getCombatUnit(combatEvent.defenderSide, combatEvent.defenderIndex);
-  const defenderHealth = defenderUnit?.querySelector(".combat-unit__health i");
-  const attackerHealth = attackerUnit?.querySelector(".combat-unit__health i");
-  const healthPercent = (combatEvent.remainingHealth / combatEvent.maxHealth) * 100;
-  const attackerHealthPercent = (combatEvent.attackerRemainingHealth / combatEvent.attackerMaxHealth) * 100;
+  const attackerUnit = getCombatUnit(combatEvent.attackerSide, combatEvent.attackerIndex, result);
+  const defenderUnit = getCombatUnit(combatEvent.defenderSide, combatEvent.defenderIndex, result);
 
   attackerUnit?.classList.add("combat-unit--attacking");
   defenderUnit?.classList.add(combatEvent.dodged ? "combat-unit--dodged" : "combat-unit--hit");
-
-  if (defenderHealth) {
-    defenderHealth.style.width = `${Math.max(0, healthPercent)}%`;
-  }
-
-  if (attackerHealth) {
-    attackerHealth.style.width = `${Math.max(0, attackerHealthPercent)}%`;
-  }
+  setCombatUnitHealth(defenderUnit, combatEvent.remainingHealth, combatEvent.maxHealth);
+  setCombatUnitHealth(attackerUnit, combatEvent.attackerRemainingHealth, combatEvent.attackerMaxHealth);
 
   if (combatEvent.defeated) {
     defenderUnit?.classList.add("combat-unit--defeated");
@@ -1257,6 +1471,9 @@ function playCombatEvents(result, eventIndex = 0) {
   if (combatEvent.attackerDefeated) {
     attackerUnit?.classList.add("combat-unit--defeated");
   }
+
+  updateCombatRemainingCounts();
+  playCombatMoment(combatEvent, attackerUnit, defenderUnit, eventIndex, result.events.length);
 
   const abilityCallout = combatEvent.abilityNames.length
     ? `${combatEvent.abilityNames.join(" + ")}!`
@@ -1283,10 +1500,25 @@ function startCombatPhase() {
   }
 
   gameState.phase = "combat";
+  window.PRWAudio?.setScene("combat");
+  window.PRWAudio?.play("combatStart");
   document.body.classList.add("combat-phase", "combat-resolving");
   document.body.classList.remove("combat-resolved");
+  combatArena.classList.remove(
+    "combat-arena--impact",
+    "combat-arena--heavy-impact",
+    "combat-arena--finalizing",
+  );
   deploymentWorkspace.hidden = true;
   combatArena.hidden = false;
+  combatFxLayer.innerHTML = "";
+  combatTimeline.innerHTML = "";
+  combatRoundResult.hidden = true;
+  combatRoundResult.setAttribute("aria-hidden", "true");
+  combatRoundResult.className = "combat-round-result";
+  combatRoundBadge.textContent = `Round ${String(gameState.round).padStart(2, "0")}`;
+  combatEventCounter.textContent = "00";
+  combatEventProgress.style.width = "0%";
   teamKickerElement.innerHTML = "<span>Combat Zone</span> // Round Engagement";
   teamTitleElement.textContent = "Autobattle In Progress";
   buildTimerChip.querySelector("small").textContent = "Combat";
@@ -1298,6 +1530,7 @@ function startCombatPhase() {
   enemyCombatName.textContent = opponent?.name || "No Opponent";
   renderCombatTeam(playerCombatTeam, getHumanPlayer().team);
   renderCombatTeam(enemyCombatTeam, opponent?.team || []);
+  updateCombatRemainingCounts();
   combatFeed.textContent = opponent
     ? `Round ${gameState.round}: your squad is engaging ${opponent.name}.`
     : "No valid opponent detected.";
@@ -1306,7 +1539,12 @@ function startCombatPhase() {
 
   gameState.combatResults = gameState.pairings.map(([firstPlayer, secondPlayer]) => {
     const result = simulateBattle(firstPlayer, secondPlayer);
-    return { ...result, damage: calculateCombatDamage(result.survivors) };
+    return {
+      ...result,
+      firstPlayerId: firstPlayer.id,
+      secondPlayerId: secondPlayer.id,
+      damage: calculateCombatDamage(result.survivors),
+    };
   });
   const humanResult = gameState.combatResults.find(
     (result) => result.winner.isHuman || result.loser.isHuman,
@@ -1337,9 +1575,19 @@ function resolveCombatPhase() {
   );
   const playerWon = humanResult?.winner.isHuman;
   const opponent = playerWon ? humanResult?.loser : humanResult?.winner;
+  window.PRWAudio?.play(playerWon ? "victory" : "defeat");
 
   document.body.classList.remove("combat-resolving");
   document.body.classList.add("combat-resolved", playerWon ? "combat-victory" : "combat-defeat");
+  combatArena.classList.remove("combat-arena--finalizing", "combat-arena--impact", "combat-arena--heavy-impact");
+  combatRoundResult.hidden = false;
+  combatRoundResult.setAttribute("aria-hidden", "false");
+  combatRoundResult.className = `combat-round-result combat-round-result--${playerWon ? "victory" : "defeat"}`;
+  combatRoundResultKicker.textContent = `Round ${String(gameState.round).padStart(2, "0")} Complete`;
+  combatRoundResultTitle.textContent = playerWon ? "Victory" : "Defeat";
+  combatRoundResultDetail.textContent = playerWon
+    ? `${opponent?.name || "Enemy squad"} neutralized // Integrity secure`
+    : `${humanResult?.damage || 0} integrity damage // ${humanPlayer.hp} HP remains`;
   combatFeed.innerHTML = playerWon
     ? `<strong>Victory!</strong> ${opponent?.name || "The enemy"} was defeated. You lose no HP.`
     : `<strong>Defeat.</strong> ${opponent?.name || "The enemy"} dealt ${humanResult?.damage || 0} damage. ${humanPlayer.hp} HP remains.`;
@@ -1392,6 +1640,7 @@ function completeCombatRound() {
   gameState.round += 1;
   gameState.credits += 8 + Math.min(4, gameState.round);
   gameState.phase = "build";
+  window.PRWAudio?.setScene("build");
   gameState.buildPhaseActive = true;
   gameState.selectedShopId = null;
   document.body.classList.remove(
@@ -1403,6 +1652,9 @@ function completeCombatRound() {
     "combat-defeat",
   );
   combatArena.hidden = true;
+  combatRoundResult.hidden = true;
+  combatRoundResult.setAttribute("aria-hidden", "true");
+  combatFxLayer.innerHTML = "";
   deploymentWorkspace.hidden = false;
   teamKickerElement.innerHTML = "<span>Squad Deployment</span> // Your Side";
   teamTitleElement.textContent = "Assemble Your Strike Team";
@@ -1515,6 +1767,7 @@ function purchaseHero(heroId) {
   const hero = shopHeroes.get(heroId);
 
   if (!gameState.buildPhaseActive) {
+    window.PRWAudio?.play("error");
     announce("The build phase has ended.");
     return;
   }
@@ -1524,6 +1777,7 @@ function purchaseHero(heroId) {
   }
 
   if (gameState.credits < hero.cost) {
+    window.PRWAudio?.play("error");
     hero.card.classList.remove("shop-card--unaffordable");
     void hero.card.offsetWidth;
     hero.card.classList.add("shop-card--unaffordable");
@@ -1533,6 +1787,7 @@ function purchaseHero(heroId) {
 
   markHumanNotReady();
   gameState.credits -= hero.cost;
+  window.PRWAudio?.play("purchase");
   hero.card.dataset.status = "purchased";
   hero.card.draggable = false;
   hero.card.classList.add("shop-card--purchased");
@@ -1801,6 +2056,7 @@ function deployPurchasedHeroToRoster(heroId, zone, slotIndex) {
   }
 
   if (destinationHero && !canMergeHeroes(destinationHero, shopHero)) {
+    window.PRWAudio?.play("error");
     announce("That slot is occupied. Use an empty slot or a matching level 1 hero.");
     return false;
   }
@@ -1813,6 +2069,7 @@ function deployPurchasedHeroToRoster(heroId, zone, slotIndex) {
     applyHeroLevelStats(destinationHero);
     markShopHeroDeployed(shopHero, destinationLabel);
     renderRoster();
+    window.PRWAudio?.play("merge");
     announce(`${destinationHero.name} merged to level ${destinationHero.level}. Power and health increased.`);
     return true;
   }
@@ -1821,6 +2078,7 @@ function deployPurchasedHeroToRoster(heroId, zone, slotIndex) {
   roster[slotIndex] = deployedHero;
   markShopHeroDeployed(shopHero, destinationLabel);
   renderRoster();
+  window.PRWAudio?.play("deploy");
   announce(`${deployedHero.name} deployed to ${destinationLabel}.`);
   return true;
 }
@@ -1846,6 +2104,7 @@ function moveRosterHero(fromZone, fromIndex, toZone, toIndex) {
     applyHeroLevelStats(destinationHero);
     sourceRoster[fromIndex] = null;
     renderRoster();
+    window.PRWAudio?.play("merge");
     announce(`${destinationHero.name} merged to level ${destinationHero.level}. Power and health increased.`);
     return;
   }
@@ -1853,6 +2112,7 @@ function moveRosterHero(fromZone, fromIndex, toZone, toIndex) {
   destinationRoster[toIndex] = movingHero;
   sourceRoster[fromIndex] = destinationHero;
   renderRoster();
+  window.PRWAudio?.play("deploy");
   announce(`${movingHero.name} moved to ${getRosterLabel(toZone)} slot ${toIndex + 1}.`);
 }
 
@@ -1866,6 +2126,7 @@ function mergeRosterHero(zone, slotIndex) {
   const partner = findMergePartner(zone, slotIndex);
 
   if (!hero || !partner) {
+    window.PRWAudio?.play("error");
     announce(hero?.level >= MAX_HERO_LEVEL ? `${hero.name} is already level 4.` : "A matching hero of the same level is required.");
     return;
   }
@@ -1875,6 +2136,7 @@ function mergeRosterHero(zone, slotIndex) {
   hero.level = (hero.level || 1) + 1;
   applyHeroLevelStats(hero);
   renderRoster();
+  window.PRWAudio?.play("levelUp");
   announce(`${hero.name} merged to level ${hero.level}. Power increased to ${hero.power} and health to ${hero.health}.`);
 }
 
@@ -1895,6 +2157,7 @@ function sellRosterHero(zone, slotIndex) {
   const sellValue = rosterHeroSellValue(hero);
   gameState.credits += sellValue;
   roster[slotIndex] = null;
+  window.PRWAudio?.play("sell");
 
   if (hero.card?.dataset.heroId === hero.catalogId && hero.card.dataset.status === "deployed") {
     const excludedIds = new Set([...shopHeroes.values()].map((shopHero) => shopHero.catalogId));
