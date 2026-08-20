@@ -56,8 +56,19 @@ const secondaryHero = document.querySelector("#ThemeHeroSecondary");
 const colorModeButton = document.querySelector("#ColorModeButton");
 const colorModeIcon = document.querySelector("#ColorModeIcon");
 const colorModeLabel = document.querySelector("#ColorModeLabel");
+const signupButton = document.querySelector("#SignupButton");
+const loginButton = document.querySelector("#LoginButton");
+const loginPanel = document.querySelector("#prwLoginPanel");
+const authTitle = document.querySelector("#prwAuthTitle");
+const authKicker = document.querySelector("#prwAuthKicker");
+const authDescription = document.querySelector("#prwAuthDescription");
+const authModeCode = document.querySelector("#prwAuthModeCode");
+const authActionLabel = document.querySelector("#prwLoginButton span");
+const authCloseButtons = [...document.querySelectorAll("[data-auth-close]")];
+const usernameInput = document.querySelector("#prwUsernameInput");
 
 let transitionTimer;
+let authMenuTrigger = null;
 
 function readSavedColorMode() {
   try {
@@ -132,6 +143,54 @@ themeSwitches.forEach((themeSwitch) => {
 
 colorModeButton.addEventListener("click", () => {
   applyColorMode(body.dataset.mode === "dark" ? "light" : "dark");
+});
+
+function setAuthButtonState(isOpen) {
+  signupButton?.setAttribute("aria-expanded", String(isOpen && loginPanel.dataset.authMode === "signup"));
+  loginButton?.setAttribute("aria-expanded", String(isOpen && loginPanel.dataset.authMode === "login"));
+}
+
+function openAuthMenu(mode, trigger) {
+  const isSignup = mode === "signup";
+
+  authMenuTrigger = trigger;
+  loginPanel.dataset.authMode = isSignup ? "signup" : "login";
+  authKicker.textContent = isSignup ? "New Challenger Registration" : "Account Uplink";
+  authTitle.textContent = isSignup ? "Create Your Identity" : "Welcome Back, Hero";
+  authDescription.textContent = isSignup
+    ? "Create your PalaRivals Watch identity and prepare to enter the multiverse arena."
+    : "Enter your credentials to reconnect with your PalaRivals Watch profile.";
+  authModeCode.textContent = isSignup ? "SIGNUP // 02" : "LOGIN // 01";
+  authActionLabel.textContent = isSignup ? "Create Account" : "Log In";
+  loginPanel.hidden = false;
+  loginPanel.setAttribute("aria-hidden", "false");
+  body.classList.add("auth-menu-open");
+  setAuthButtonState(true);
+  window.PRWAudio?.play("modalOpen");
+  window.requestAnimationFrame(() => usernameInput?.focus());
+}
+
+function closeAuthMenu() {
+  if (loginPanel.hidden) {
+    return;
+  }
+
+  loginPanel.hidden = true;
+  loginPanel.setAttribute("aria-hidden", "true");
+  body.classList.remove("auth-menu-open");
+  setAuthButtonState(false);
+  window.PRWAudio?.play("modalClose");
+  authMenuTrigger?.focus();
+  authMenuTrigger = null;
+}
+
+signupButton?.addEventListener("click", () => openAuthMenu("signup", signupButton));
+loginButton?.addEventListener("click", () => openAuthMenu("login", loginButton));
+authCloseButtons.forEach((closeButton) => closeButton.addEventListener("click", closeAuthMenu));
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    closeAuthMenu();
+  }
 });
 
 applyColorMode(readSavedColorMode(), { persist: false });

@@ -1,0 +1,481 @@
+/* PalaRivals Watch account overlay.
+   Kept separate so authentication logic can evolve without touching menu styles. */
+
+body.auth-menu-open {
+  overflow: hidden;
+}
+
+.prw-login-panel {
+  --auth-primary: var(--primary, #5fe7ff);
+  --auth-secondary: var(--secondary, #ff5577);
+  --auth-accent: var(--accent, #a970ff);
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  padding: clamp(18px, 4vw, 58px);
+  place-items: center;
+}
+
+.prw-login-panel[hidden] {
+  display: none;
+}
+
+.prw-login-panel__backdrop {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  background:
+    radial-gradient(circle at 25% 30%, color-mix(in srgb, var(--auth-primary) 12%, transparent), transparent 34%),
+    radial-gradient(circle at 78% 70%, color-mix(in srgb, var(--auth-secondary) 11%, transparent), transparent 36%),
+    rgba(2, 5, 13, .82);
+  cursor: default;
+  backdrop-filter: blur(16px) saturate(.72);
+  animation: prw-auth-backdrop-in 220ms ease-out both;
+}
+
+.prw-auth-card {
+  position: relative;
+  width: min(100%, 680px);
+  overflow: hidden;
+  padding: clamp(24px, 4vw, 42px);
+  border: 1px solid color-mix(in srgb, var(--auth-primary) 45%, rgba(255, 255, 255, .14));
+  clip-path: polygon(22px 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%, 0 22px);
+  color: var(--ink, #f8fbff);
+  background:
+    linear-gradient(115deg, color-mix(in srgb, var(--auth-primary) 7%, transparent), transparent 38%),
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--auth-secondary) 15%, transparent), transparent 260px),
+    linear-gradient(145deg, rgba(12, 24, 41, .985), rgba(3, 8, 18, .99));
+  box-shadow:
+    0 38px 100px rgba(0, 0, 0, .65),
+    0 0 55px color-mix(in srgb, var(--auth-primary) 11%, transparent),
+    inset 0 0 70px rgba(255, 255, 255, .018);
+  animation: prw-auth-card-in 360ms cubic-bezier(.16, .9, .24, 1) both;
+}
+
+.prw-auth-card::before {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--auth-primary), var(--auth-accent) 50%, var(--auth-secondary));
+  box-shadow: 0 0 22px color-mix(in srgb, var(--auth-primary) 45%, transparent);
+  content: "";
+}
+
+.prw-auth-card::after {
+  position: absolute;
+  z-index: -1;
+  right: -34px;
+  bottom: -60px;
+  color: color-mix(in srgb, var(--auth-primary) 5%, transparent);
+  content: "PRW";
+  font-family: "Barlow Condensed", Impact, sans-serif;
+  font-size: 10rem;
+  font-style: italic;
+  font-weight: 900;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.prw-auth-card__edge-code {
+  position: absolute;
+  top: 50%;
+  right: -2.6rem;
+  color: color-mix(in srgb, var(--auth-primary) 45%, #52647b);
+  font-size: .52rem;
+  font-weight: 800;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+  transform: rotate(90deg) translateX(50%);
+  transform-origin: right center;
+}
+
+.prw-auth-card__header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, .09);
+}
+
+.prw-auth-card__brand {
+  position: relative;
+  display: grid;
+  width: 54px;
+  height: 58px;
+  border: 1px solid color-mix(in srgb, var(--auth-primary) 65%, white 10%);
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  place-items: center;
+  color: #04101b;
+  background: linear-gradient(145deg, color-mix(in srgb, var(--auth-primary) 72%, white), var(--auth-primary));
+  box-shadow: 0 0 24px color-mix(in srgb, var(--auth-primary) 25%, transparent);
+}
+
+.prw-auth-card__brand span {
+  font-family: "Barlow Condensed", Impact, sans-serif;
+  font-size: .9rem;
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -.03em;
+}
+
+.prw-auth-card__brand i {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  width: 11px;
+  height: 2px;
+  background: var(--auth-secondary);
+  box-shadow: -5px -4px 0 var(--auth-accent);
+}
+
+.prw-auth-card__kicker {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--auth-primary);
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+}
+
+.prw-auth-card h2 {
+  margin: 0;
+  font-family: "Barlow Condensed", Impact, sans-serif;
+  font-size: clamp(2.1rem, 6vw, 3.4rem);
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -.035em;
+  line-height: .9;
+  text-transform: uppercase;
+}
+
+.prw-auth-card__close {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .14);
+  place-items: center;
+  color: #91a1b5;
+  background: rgba(255, 255, 255, .035);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: border-color 160ms ease, color 160ms ease, background 160ms ease, transform 160ms ease;
+}
+
+.prw-auth-card__close:hover,
+.prw-auth-card__close:focus-visible {
+  border-color: var(--auth-secondary);
+  color: white;
+  background: color-mix(in srgb, var(--auth-secondary) 24%, transparent);
+  transform: rotate(4deg) scale(1.05);
+}
+
+.prw-auth-card__status {
+  display: flex;
+  margin: 16px 0 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  color: #71849b;
+  font-size: .55rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.prw-auth-card__status span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.prw-auth-card__status i {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #55e6a0;
+  box-shadow: 0 0 10px #55e6a0;
+  animation: prw-auth-status 1.1s ease-in-out infinite alternate;
+}
+
+.prw-auth-card__status b {
+  color: color-mix(in srgb, var(--auth-primary) 70%, white 15%);
+}
+
+.prw-auth-card__description {
+  max-width: 540px;
+  margin: 20px 0 24px;
+  color: var(--muted, #9bacc0);
+  font-size: .95rem;
+  font-weight: 600;
+  line-height: 1.45;
+}
+
+.prw-auth-card__fields {
+  display: grid;
+  gap: 18px;
+}
+
+.prw-login-panel__row label {
+  display: grid;
+  gap: 8px;
+}
+
+.prw-login-panel__row label > span {
+  color: #cbd6e4;
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.prw-login-panel input {
+  width: 100%;
+  min-height: 54px;
+  padding: 0 16px;
+  border: 1px solid rgba(132, 163, 194, .24);
+  border-left: 3px solid color-mix(in srgb, var(--auth-primary) 58%, transparent);
+  border-radius: 0;
+  outline: 0;
+  color: var(--ink, #f8fbff);
+  background:
+    linear-gradient(90deg, color-mix(in srgb, var(--auth-primary) 6%, transparent), transparent 50%),
+    rgba(2, 7, 16, .72);
+  font-family: "Rajdhani", "Arial Narrow", sans-serif;
+  font-size: 1rem;
+  font-weight: 650;
+  caret-color: var(--auth-primary);
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.prw-login-panel input::placeholder {
+  color: #627287;
+  opacity: 1;
+}
+
+.prw-login-panel input:hover {
+  border-color: color-mix(in srgb, var(--auth-primary) 42%, rgba(255, 255, 255, .15));
+}
+
+.prw-login-panel input:focus {
+  border-color: var(--auth-primary);
+  background: color-mix(in srgb, var(--auth-primary) 7%, rgba(2, 7, 16, .82));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--auth-primary) 11%, transparent), inset 0 0 20px color-mix(in srgb, var(--auth-primary) 5%, transparent);
+}
+
+.prw-login-panel__clarifications {
+  display: block;
+  margin: 7px 0 0;
+  color: #7f90a5;
+  font-size: .68rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.prw-login-panel__clarifications b {
+  color: #b8c7d9;
+}
+
+.prw-login-panel__actions {
+  margin-top: 26px;
+}
+
+#prwLoginButton {
+  display: flex;
+  width: 100%;
+  min-height: 58px;
+  padding: 0 18px 0 22px;
+  border: 0;
+  align-items: center;
+  justify-content: space-between;
+  color: #031019;
+  background: linear-gradient(105deg, var(--auth-primary), color-mix(in srgb, var(--auth-primary) 62%, white) 55%, var(--auth-accent));
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--auth-primary) 16%, transparent);
+  font-size: .82rem;
+  font-weight: 900;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: filter 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+#prwLoginButton i {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(3, 16, 25, .3);
+  place-items: center;
+  font-size: 1rem;
+  font-style: normal;
+  transition: transform 180ms ease;
+}
+
+#prwLoginButton:hover,
+#prwLoginButton:focus-visible {
+  filter: brightness(1.08) saturate(1.12);
+  transform: translateY(-2px);
+  box-shadow: 0 18px 42px color-mix(in srgb, var(--auth-primary) 26%, transparent);
+}
+
+#prwLoginButton:hover i {
+  transform: translateX(4px);
+}
+
+.prw-auth-card__footer {
+  display: flex;
+  margin-top: 22px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, .07);
+  justify-content: space-between;
+  gap: 12px;
+  color: #53657b;
+  font-size: .52rem;
+  font-weight: 750;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.prw-login-panel[data-auth-mode="signup"] .prw-auth-card::before {
+  background: linear-gradient(90deg, var(--auth-secondary), var(--auth-accent) 48%, var(--auth-primary));
+}
+
+.prw-login-panel[data-auth-mode="signup"] #prwLoginButton {
+  color: white;
+  background: linear-gradient(105deg, var(--auth-secondary), color-mix(in srgb, var(--auth-secondary) 70%, #7e48ff) 58%, var(--auth-primary));
+}
+
+body[data-theme="marvel"] .prw-login-panel {
+  --auth-primary: #18dce8;
+  --auth-secondary: #f72d66;
+  --auth-accent: #f2cf2f;
+}
+
+body[data-theme="paladins"] .prw-login-panel {
+  --auth-primary: #6bdcff;
+  --auth-secondary: #b36dff;
+  --auth-accent: #f4c65d;
+}
+
+body[data-theme="overwatch"] .prw-login-panel {
+  --auth-primary: #f59c2d;
+  --auth-secondary: #3e9fff;
+  --auth-accent: #f5f7fb;
+}
+
+body[data-mode="light"] .prw-login-panel__backdrop {
+  background:
+    radial-gradient(circle at 25% 30%, color-mix(in srgb, var(--auth-primary) 15%, transparent), transparent 34%),
+    rgba(223, 232, 240, .77);
+}
+
+body[data-mode="light"] .prw-auth-card {
+  color: #142b39;
+  background:
+    linear-gradient(115deg, color-mix(in srgb, var(--auth-primary) 10%, transparent), transparent 38%),
+    radial-gradient(circle at 100% 0, color-mix(in srgb, var(--auth-secondary) 12%, transparent), transparent 260px),
+    rgba(248, 252, 253, .98);
+  box-shadow: 0 38px 90px rgba(36, 61, 76, .24), 0 0 45px rgba(255, 255, 255, .5);
+}
+
+body[data-mode="light"] .prw-auth-card__header {
+  border-bottom-color: rgba(21, 65, 84, .12);
+}
+
+body[data-mode="light"] .prw-login-panel__row label > span,
+body[data-mode="light"] .prw-login-panel__clarifications b {
+  color: #284556;
+}
+
+body[data-mode="light"] .prw-login-panel input {
+  color: #15313f;
+  background: rgba(233, 242, 246, .82);
+}
+
+body[data-mode="light"] .prw-login-panel__clarifications,
+body[data-mode="light"] .prw-auth-card__description {
+  color: #607785;
+}
+
+@keyframes prw-auth-backdrop-in {
+  from { opacity: 0; }
+}
+
+@keyframes prw-auth-card-in {
+  from { opacity: 0; transform: translateY(24px) scale(.96); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes prw-auth-status {
+  to { opacity: .55; transform: scale(.82); }
+}
+
+@media (max-width: 600px) {
+  .prw-login-panel {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .prw-auth-card {
+    width: 100%;
+    max-height: calc(100svh - 20px);
+    overflow-y: auto;
+    padding: 24px 20px 22px;
+    clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+  }
+
+  .prw-auth-card__header {
+    grid-template-columns: 44px minmax(0, 1fr) 38px;
+    gap: 11px;
+  }
+
+  .prw-auth-card__brand {
+    width: 44px;
+    height: 48px;
+  }
+
+  .prw-auth-card h2 {
+    font-size: clamp(1.85rem, 10vw, 2.5rem);
+  }
+
+  .prw-auth-card__close {
+    width: 38px;
+    height: 38px;
+  }
+
+  .prw-auth-card__status,
+  .prw-auth-card__footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .prw-auth-card__description {
+    margin: 16px 0 20px;
+    font-size: .86rem;
+  }
+
+  .prw-login-panel input {
+    min-height: 50px;
+    font-size: .92rem;
+  }
+
+  .prw-auth-card__edge-code {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .prw-login-panel__backdrop,
+  .prw-auth-card,
+  .prw-auth-card__status i {
+    animation: none;
+  }
+}

@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>PalaRivals Watch</title>
   <link rel="stylesheet" href="css/main/Main.css">
+  <link rel="stylesheet" href="css/main/Auth.css">
   <link rel="stylesheet" href="css/shared/Audio.css">
   <meta name="description" content="Main menu for PalaRivals Watch.">
   <script>
@@ -29,8 +30,8 @@
       <span class="ModeToggle__icon" id="ColorModeIcon" aria-hidden="true">&#9788;</span>
       <span id="ColorModeLabel">Light</span>
     </button>
-    <button class="AccountButtons" id="SignupButton" type="button">Sign Up</button>
-    <button class="AccountButtons" id="LoginButton" type="button">Log In</button>
+    <button class="AccountButtons" id="SignupButton" type="button" aria-controls="prwLoginPanel" aria-expanded="false">Sign Up</button>
+    <button class="AccountButtons" id="LoginButton" type="button" aria-controls="prwLoginPanel" aria-expanded="false">Log In</button>
     <button class="AccountButtons hidden" id="AccountButton" type="button">Account</button>
   </section>
 
@@ -133,21 +134,50 @@
     </aside>
   </main>
 
-  <section class="prw-login-panel" id="prwLoginPanel">
-    <header>
-      <span>PlaceHolder (Login or Signup)</span>
-    </header>
-    <div class="prw-login-panel__row">
-      <label>Username<input id="prwUsernameInput" type="text" minlength="3" maxlength="50" placeholder="Username (3-50 Characters)" size="25" aria-label="Username input"></label>
-      <small class="prw-login-panel__clarifications">Username must be 3-50 characters long</small>
-    </div>
-    <div class="prw-login-panel__row">
-      <label>Password<input id="prwPasswordInput" type="password" minlength="6" maxlength="30" placeholder="Password (6-30 Characters)" size="25" aria-label="Password input"></label>
-      <small class="prw-login-panel__clarifications">Password must be 6-30 characters long with atleast <b>1 Uppercase character, 1 Lowercase character, and 1 Number</b></small>
-    </div>
-    <div class="prw-login-panel__row">
-      <button id="prwLoginButton" type="button">PlaceHolder (Login or Signup)</button>
-    </div>
+  <section class="prw-login-panel" id="prwLoginPanel" data-auth-mode="login" aria-labelledby="prwAuthTitle" aria-hidden="true" hidden>
+    <button class="prw-login-panel__backdrop" type="button" data-auth-close aria-label="Close account menu"></button>
+
+    <article class="prw-auth-card" role="dialog" aria-modal="true" aria-describedby="prwAuthDescription">
+      <span class="prw-auth-card__edge-code" aria-hidden="true">PRW // ID-SECURE</span>
+      <header class="prw-auth-card__header">
+        <div class="prw-auth-card__brand" aria-hidden="true">
+          <span>PRW</span>
+          <i></i>
+        </div>
+        <div>
+          <span class="prw-auth-card__kicker" id="prwAuthKicker">Account Uplink</span>
+          <h2 id="prwAuthTitle">PlaceHolder (Login or Signup)</h2>
+        </div>
+        <button class="prw-auth-card__close" type="button" data-auth-close aria-label="Close account menu"><span aria-hidden="true">×</span></button>
+      </header>
+
+      <div class="prw-auth-card__status" aria-hidden="true">
+        <span><i></i> Identity network online</span>
+        <b id="prwAuthModeCode">LOGIN // 01</b>
+      </div>
+
+      <p class="prw-auth-card__description" id="prwAuthDescription">Enter your credentials to reconnect with your PalaRivals Watch profile.</p>
+
+      <div class="prw-auth-card__fields">
+        <div class="prw-login-panel__row">
+          <label for="prwUsernameInput"><span>Username</span><input id="prwUsernameInput" type="text" minlength="3" maxlength="50" placeholder="Username (3-50 Characters)" size="25" aria-label="Username input"></label>
+          <small class="prw-login-panel__clarifications">Username must be 3-50 characters long</small>
+        </div>
+        <div class="prw-login-panel__row">
+          <label for="prwPasswordInput"><span>Password</span><input id="prwPasswordInput" type="password" minlength="6" maxlength="30" placeholder="Password (6-30 Characters)" size="25" aria-label="Password input"></label>
+          <small class="prw-login-panel__clarifications">Password must be 6-30 characters long with atleast <b>1 Uppercase character, 1 Lowercase character, and 1 Number</b></small>
+        </div>
+      </div>
+
+      <div class="prw-login-panel__row prw-login-panel__actions">
+        <button id="prwLoginButton" type="button"><span>PlaceHolder (Login or Signup)</span><i aria-hidden="true">➜</i></button>
+      </div>
+
+      <footer class="prw-auth-card__footer">
+        <span>Encrypted profile channel</span>
+        <span>Three worlds // One identity</span>
+      </footer>
+    </article>
   </section>
 
   <footer>
