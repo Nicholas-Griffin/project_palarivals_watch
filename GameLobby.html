@@ -94,37 +94,57 @@
         <span class="arena-field__telemetry arena-field__telemetry--right" aria-hidden="true">FORMATION // ALPHA</span>
         <div class="arena-field__label"><span></span> Deployment Zone <span></span></div>
 
-        <div class="hero-lineup" id="teamBoard" aria-label="Six empty team slots">
-          <article class="team-slot" data-slot-index="0" tabindex="0" aria-label="Empty team slot 1">
+        <div class="deployment-workspace" id="deploymentWorkspace">
+        <div class="hero-lineup" id="teamBoard" aria-label="Six combat team slots">
+          <article class="team-slot roster-slot" data-roster-zone="team" data-slot-index="0" tabindex="0" aria-label="Empty team slot 1">
             <span class="team-slot__number">01</span>
             <span class="team-slot__plus" aria-hidden="true">+</span>
             <span class="team-slot__label">Drop Hero</span>
           </article>
-          <article class="team-slot" data-slot-index="1" tabindex="0" aria-label="Empty team slot 2">
+          <article class="team-slot roster-slot" data-roster-zone="team" data-slot-index="1" tabindex="0" aria-label="Empty team slot 2">
             <span class="team-slot__number">02</span>
             <span class="team-slot__plus" aria-hidden="true">+</span>
             <span class="team-slot__label">Drop Hero</span>
           </article>
-          <article class="team-slot" data-slot-index="2" tabindex="0" aria-label="Empty team slot 3">
+          <article class="team-slot roster-slot" data-roster-zone="team" data-slot-index="2" tabindex="0" aria-label="Empty team slot 3">
             <span class="team-slot__number">03</span>
             <span class="team-slot__plus" aria-hidden="true">+</span>
             <span class="team-slot__label">Drop Hero</span>
           </article>
-          <article class="team-slot" data-slot-index="3" tabindex="0" aria-label="Empty team slot 4">
+          <article class="team-slot roster-slot" data-roster-zone="team" data-slot-index="3" tabindex="0" aria-label="Empty team slot 4">
             <span class="team-slot__number">04</span>
             <span class="team-slot__plus" aria-hidden="true">+</span>
             <span class="team-slot__label">Drop Hero</span>
           </article>
-          <article class="team-slot" data-slot-index="4" tabindex="0" aria-label="Empty team slot 5">
+          <article class="team-slot roster-slot" data-roster-zone="team" data-slot-index="4" tabindex="0" aria-label="Empty team slot 5">
             <span class="team-slot__number">05</span>
             <span class="team-slot__plus" aria-hidden="true">+</span>
             <span class="team-slot__label">Drop Hero</span>
           </article>
-          <article class="team-slot" data-slot-index="5" tabindex="0" aria-label="Empty team slot 6">
+          <article class="team-slot roster-slot" data-roster-zone="team" data-slot-index="5" tabindex="0" aria-label="Empty team slot 6">
             <span class="team-slot__number">06</span>
             <span class="team-slot__plus" aria-hidden="true">+</span>
             <span class="team-slot__label">Drop Hero</span>
           </article>
+        </div>
+
+        <section class="sideline" aria-labelledby="sidelineTitle">
+          <header class="sideline__header">
+            <div>
+              <p class="kicker"><span>Reserve Rail</span> // Non-combat</p>
+              <h2 id="sidelineTitle">Sideline</h2>
+            </div>
+            <p><strong id="sidelineCount">0</strong>/6 reserves <span>Combine 2 matching heroes of the same level</span></p>
+          </header>
+          <div class="bench-lineup" id="sidelineBoard" aria-label="Six non-combat sideline slots">
+            <article class="team-slot roster-slot bench-slot" data-roster-zone="bench" data-slot-index="0" tabindex="0" aria-label="Empty sideline slot 1"></article>
+            <article class="team-slot roster-slot bench-slot" data-roster-zone="bench" data-slot-index="1" tabindex="0" aria-label="Empty sideline slot 2"></article>
+            <article class="team-slot roster-slot bench-slot" data-roster-zone="bench" data-slot-index="2" tabindex="0" aria-label="Empty sideline slot 3"></article>
+            <article class="team-slot roster-slot bench-slot" data-roster-zone="bench" data-slot-index="3" tabindex="0" aria-label="Empty sideline slot 4"></article>
+            <article class="team-slot roster-slot bench-slot" data-roster-zone="bench" data-slot-index="4" tabindex="0" aria-label="Empty sideline slot 5"></article>
+            <article class="team-slot roster-slot bench-slot" data-roster-zone="bench" data-slot-index="5" tabindex="0" aria-label="Empty sideline slot 6"></article>
+          </div>
+        </section>
         </div>
 
         <section class="combat-arena" id="combatArena" aria-labelledby="combatTitle" hidden>
@@ -156,7 +176,7 @@
         <div>
           <p class="kicker"><span>Armory</span> // Recruit</p>
           <h2 id="shop-title">Available Heroes</h2>
-          <p class="shop-help">Buy, then drag to an empty slot.</p>
+          <p class="shop-help">Buy, then deploy to your squad or sideline. Match 2 heroes to level up.</p>
         </div>
         <div class="shop-tier">
           <small>Shop Tier</small>

@@ -3674,3 +3674,349 @@ body.lobby-v2 .hero-card:focus-within > img:not(.universe-badge) {
     transition: opacity 100ms ease, visibility 100ms ease;
   }
 }
+
+/* Level-up roster and non-combat sideline. */
+
+.deployment-workspace {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  width: min(100%, 1120px);
+  padding: 1rem 0 2.1rem;
+  gap: 0.75rem;
+}
+
+.deployment-workspace[hidden] {
+  display: none;
+}
+
+body.lobby-v2 .deployment-workspace .hero-lineup {
+  width: 100%;
+  padding: 0;
+}
+
+.sideline {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.32fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 1rem;
+  min-width: 0;
+  padding: 0.72rem 0.9rem;
+  border: 1px solid rgba(156, 108, 255, 0.2);
+  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  background:
+    linear-gradient(90deg, rgba(156, 108, 255, 0.08), transparent 34%),
+    rgba(4, 9, 20, 0.78);
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.035), inset 0 0 36px rgba(74, 48, 141, 0.06);
+}
+
+.sideline::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: linear-gradient(var(--violet), var(--cyan));
+  box-shadow: 0 0 16px rgba(156, 108, 255, 0.5);
+  content: "";
+}
+
+.sideline__header h2 {
+  margin: 0.16rem 0 0;
+  font-size: 1.1rem;
+  font-style: italic;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+  text-transform: uppercase;
+}
+
+.sideline__header > p {
+  margin: 0.45rem 0 0;
+  color: #7788a2;
+  font-size: 0.46rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  line-height: 1.45;
+  text-transform: uppercase;
+}
+
+.sideline__header > p strong {
+  color: var(--violet);
+  font-size: 0.72rem;
+}
+
+.sideline__header > p span {
+  display: block;
+  margin-top: 0.18rem;
+  color: rgba(95, 231, 255, 0.64);
+  letter-spacing: 0.04em;
+}
+
+.bench-lineup {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(76px, 104px));
+  justify-content: end;
+  gap: clamp(0.35rem, 0.65vw, 0.65rem);
+  min-width: 0;
+  padding: 0.15rem;
+  overflow-x: auto;
+  scrollbar-color: rgba(156, 108, 255, 0.4) transparent;
+}
+
+body.lobby-v2 .bench-slot {
+  width: 100%;
+  min-width: 76px;
+  border-color: rgba(156, 108, 255, 0.25);
+  background:
+    radial-gradient(circle, rgba(156, 108, 255, 0.1), transparent 48%),
+    linear-gradient(145deg, rgba(22, 19, 48, 0.82), rgba(4, 9, 20, 0.94));
+}
+
+body.lobby-v2 .bench-slot::before {
+  border-color: rgba(156, 108, 255, 0.6);
+}
+
+body.lobby-v2 .bench-slot::after {
+  border-color: rgba(95, 231, 255, 0.4);
+}
+
+.bench-slot .team-slot__plus {
+  width: 34px;
+  height: 34px;
+  margin-bottom: 0.28rem;
+  font-size: 1rem;
+}
+
+.bench-slot .team-slot__label {
+  font-size: 0.36rem;
+}
+
+.bench-slot .hero-card__sell {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-3px);
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.bench-slot .hero-card:hover .hero-card__sell,
+.bench-slot .hero-card:focus-within .hero-card__sell {
+  opacity: 1;
+  transform: translateX(-50%);
+}
+
+.level-badge small {
+  margin-left: 0.12rem;
+  color: rgba(255, 255, 255, 0.42);
+  font-size: 0.34rem;
+}
+
+.hero-card__level-pips {
+  position: absolute;
+  top: 2rem;
+  right: 0.45rem;
+  z-index: 6;
+  display: grid;
+  gap: 3px;
+}
+
+.hero-card__level-pips i {
+  width: 4px;
+  height: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(3, 7, 16, 0.76);
+  transform: skewY(-16deg);
+}
+
+.hero-card__level-pips i.is-filled {
+  border-color: color-mix(in srgb, var(--level-glow, var(--cyan)) 78%, white 22%);
+  background: var(--level-glow, var(--cyan));
+  box-shadow: 0 0 7px var(--level-glow, var(--cyan));
+}
+
+.hero-card--level-1 { --level-glow: var(--cyan); }
+.hero-card--level-2 { --level-glow: #4fa8ff; }
+.hero-card--level-3 { --level-glow: #b06cff; }
+.hero-card--level-4 { --level-glow: #ffc45c; }
+
+body.lobby-v2 .hero-card--level-2,
+body.lobby-v2 .hero-card--level-3,
+body.lobby-v2 .hero-card--level-4 {
+  border-color: color-mix(in srgb, var(--level-glow) 68%, var(--accent) 32%);
+  box-shadow:
+    0 17px 34px rgba(0, 0, 0, 0.38),
+    0 0 30px color-mix(in srgb, var(--level-glow) 24%, transparent),
+    inset 0 0 20px color-mix(in srgb, var(--level-glow) 8%, transparent);
+}
+
+.hero-card--level-2 { --hero-level: 2; }
+.hero-card--level-3 { --hero-level: 3; }
+.hero-card--level-4 { --hero-level: 4; }
+
+.hero-card__merge {
+  position: absolute;
+  top: 2.05rem;
+  left: 50%;
+  z-index: 12;
+  display: flex;
+  min-height: 23px;
+  padding: 0.25rem 0.42rem;
+  border: 1px solid rgba(85, 239, 170, 0.58);
+  border-radius: 999px;
+  align-items: center;
+  gap: 0.25rem;
+  color: #ddfff0;
+  background: rgba(7, 37, 29, 0.93);
+  box-shadow: 0 0 18px rgba(85, 239, 170, 0.18);
+  font-size: 0.4rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.hero-card__merge strong {
+  color: var(--green);
+  font-size: 0.39rem;
+}
+
+.hero-card__merge:hover,
+.hero-card__merge:focus-visible {
+  border-color: var(--green);
+  color: white;
+  background: rgba(10, 72, 51, 0.98);
+  outline: none;
+}
+
+.hero-card--merge-ready {
+  animation: merge-ready-pulse 1.6s ease-in-out infinite;
+}
+
+.team-slot--merge-over {
+  border-color: var(--green) !important;
+  box-shadow: inset 0 0 38px rgba(85, 239, 170, 0.22), 0 0 30px rgba(85, 239, 170, 0.25) !important;
+}
+
+.team-slot--merge-over::after {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: grid !important;
+  width: auto !important;
+  height: auto !important;
+  border: 1px solid rgba(85, 239, 170, 0.7) !important;
+  place-items: center;
+  color: #e9fff5;
+  background: rgba(5, 40, 29, 0.68);
+  box-shadow: inset 0 0 40px rgba(85, 239, 170, 0.16);
+  content: "LEVEL UP" !important;
+  font-size: 0.58rem;
+  font-weight: 950;
+  letter-spacing: 0.14em;
+}
+
+.hero-inspect__level-note {
+  color: #8fe8bd;
+  font-size: clamp(0.27rem, 0.36vw, 0.33rem);
+  font-weight: 850;
+  letter-spacing: 0.04em;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.combat-unit__level {
+  position: absolute;
+  top: 0.35rem;
+  left: 0.4rem;
+  z-index: 5;
+  padding: 0.16rem 0.28rem;
+  border: 1px solid rgba(95, 231, 255, 0.46);
+  color: #effcff;
+  background: rgba(3, 8, 18, 0.88);
+  font-size: 0.4rem;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+}
+
+@keyframes merge-ready-pulse {
+  50% {
+    filter: brightness(1.12);
+    box-shadow: 0 17px 34px rgba(0, 0, 0, 0.38), 0 0 28px rgba(85, 239, 170, 0.2);
+  }
+}
+
+@media (min-width: 1241px) {
+  body.lobby-v2 .arena-field {
+    min-height: 445px;
+  }
+}
+
+@media (max-width: 1240px) {
+  .deployment-workspace {
+    width: min(100%, 680px);
+  }
+
+  .sideline {
+    grid-template-columns: 1fr;
+  }
+
+  .sideline__header {
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .sideline__header > p {
+    margin: 0;
+    text-align: right;
+  }
+
+  .bench-lineup {
+    justify-content: start;
+  }
+
+  body.lobby-v2 .arena-field {
+    min-height: 810px;
+  }
+}
+
+@media (max-width: 930px) {
+  .deployment-workspace {
+    width: min(100%, 450px);
+  }
+
+  body.lobby-v2 .arena-field {
+    min-height: 1030px;
+  }
+}
+
+@media (max-width: 470px) {
+  .sideline {
+    padding: 0.65rem;
+  }
+
+  .sideline__header {
+    align-items: start;
+    flex-direction: column;
+  }
+
+  .sideline__header > p {
+    text-align: left;
+  }
+
+  .bench-lineup {
+    grid-template-columns: repeat(6, 92px);
+  }
+
+  body.lobby-v2 .arena-field {
+    min-height: 1080px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-card--merge-ready {
+    animation: none;
+  }
+}

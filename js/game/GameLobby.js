@@ -2,9 +2,14 @@
 
 const creditsElement = document.querySelector("#currentCredits");
 const unitCountElement = document.querySelector("#unitCount");
+const sidelineCountElement = document.querySelector("#sidelineCount");
 const gameStatusElement = document.querySelector("#gameStatus");
+const deploymentWorkspace = document.querySelector("#deploymentWorkspace");
 const teamBoard = document.querySelector("#teamBoard");
-const teamSlots = [...document.querySelectorAll(".team-slot")];
+const sidelineBoard = document.querySelector("#sidelineBoard");
+const teamSlots = [...teamBoard.querySelectorAll(".team-slot")];
+const benchSlots = [...sidelineBoard.querySelectorAll(".team-slot")];
+const rosterSlots = [...document.querySelectorAll(".roster-slot")];
 const shopCards = [...document.querySelectorAll(".shop-card")];
 const rerollButton = document.querySelector("#rerollShop");
 const upgradeShopButton = document.querySelector("#upgradeShop");
@@ -50,10 +55,13 @@ const gameState = {
   combatResults: [],
   selectedShopId: null,
   team: Array(6).fill(null),
+  bench: Array(6).fill(null),
   drag: null,
 };
 
 const MAX_SHOP_TIER = 4;
+const MAX_HERO_LEVEL = 4;
+const LEVEL_STAT_MULTIPLIERS = [1, 1.5, 2.25, 3.25];
 const SHOP_UPGRADE_COSTS = { 1: 4, 2: 6, 3: 8 };
 const BUILD_PHASE_DURATION = 60_000;
 const COMBAT_EVENT_DURATION = 620;
@@ -98,6 +106,31 @@ const heroCatalog = [
   { id: "seris", name: "Seris", universe: "paladins", image: "Img/Characters/Paladins/SerisPNG.png", logo: "Img/Icons/PaladinsLogo.png", power: 4, health: 8, cost: 3, tier: 2 },
 ];
 
+function heroCatalogId(hero) {
+  return hero?.catalogId || hero?.id;
+}
+
+function applyHeroLevelStats(hero) {
+  const catalogHero = heroCatalog.find((entry) => entry.id === heroCatalogId(hero));
+  hero.level = Math.min(MAX_HERO_LEVEL, Math.max(1, Number(hero.level) || 1));
+  hero.basePower = Number(hero.basePower ?? catalogHero?.power ?? hero.power);
+  hero.baseHealth = Number(hero.baseHealth ?? catalogHero?.health ?? hero.health);
+  const multiplier = LEVEL_STAT_MULTIPLIERS[hero.level - 1];
+  hero.power = Math.max(1, Math.round(hero.basePower * multiplier));
+  hero.health = Math.max(1, Math.round(hero.baseHealth * multiplier));
+  return hero;
+}
+
+function createHeroInstance(hero) {
+  return applyHeroLevelStats({
+    ...hero,
+    catalogId: heroCatalogId(hero),
+    basePower: hero.basePower ?? hero.power,
+    baseHealth: hero.baseHealth ?? hero.health,
+    level: hero.level || 1,
+  });
+}
+
 const players = [
   { id: "player", name: "You", initials: "YO", avatar: "cyan", hp: 100, team: gameState.team, isHuman: true, eliminated: false, ready: false, buildStatus: "Commanding" },
   { id: "novavex", name: "NovaVex", initials: "NV", avatar: "violet", hp: 100, team: [], isHuman: false, eliminated: false, ready: false, buildStatus: "Preparing" },
@@ -121,6 +154,9 @@ const shopHeroes = new Map(
       logo: card.dataset.logo,
       power: Number(card.dataset.power),
       health: Number(card.dataset.health),
+      basePower: Number(card.dataset.power),
+      baseHealth: Number(card.dataset.health),
+      level: 1,
       cost: Number(card.dataset.cost),
       card,
     },
@@ -420,19 +456,48 @@ function aiShopTier() {
 
 function chooseAiHero(aiPlayer) {
   const maxTier = aiShopTier();
-  const ownedIds = new Set(aiPlayer.team.map((hero) => hero.id));
-  let candidates = heroCatalog.filter((hero) => hero.tier <= maxTier && !ownedIds.has(hero.id));
-
-  if (!candidates.length) {
-    candidates = heroCatalog.filter((hero) => hero.tier <= maxTier);
-  }
+  const candidates = heroCatalog.filter((hero) => hero.tier <= maxTier);
 
   const weightedCandidates = candidates
-    .map((hero) => ({ hero, score: hero.power + hero.health + (Math.random() * 8) }))
+    .map((hero) => {
+      const matchingCopy = aiPlayer.team.some(
+        (ownedHero) => heroCatalogId(ownedHero) === hero.id && ownedHero.level < MAX_HERO_LEVEL,
+      );
+      return {
+        hero,
+        score: hero.power + hero.health + (matchingCopy ? 8 : 0) + (Math.random() * 8),
+      };
+    })
     .sort((first, second) => second.score - first.score)
     .slice(0, Math.max(3, Math.ceil(candidates.length / 2)));
 
-  return { ...weightedCandidates[Math.floor(Math.random() * weightedCandidates.length)].hero };
+  return createHeroInstance(weightedCandidates[Math.floor(Math.random() * weightedCandidates.length)].hero);
+}
+
+function mergeAiDuplicates(team) {
+  let merged = true;
+
+  while (merged) {
+    merged = false;
+
+    for (let firstIndex = 0; firstIndex < team.length; firstIndex += 1) {
+      const firstHero = team[firstIndex];
+      const matchIndex = team.findIndex(
+        (secondHero, secondIndex) => secondIndex > firstIndex
+          && heroCatalogId(secondHero) === heroCatalogId(firstHero)
+          && secondHero.level === firstHero.level
+          && firstHero.level < MAX_HERO_LEVEL,
+      );
+
+      if (matchIndex !== -1) {
+        firstHero.level += 1;
+        applyHeroLevelStats(firstHero);
+        team.splice(matchIndex, 1);
+        merged = true;
+        break;
+      }
+    }
+  }
 }
 
 function runAiBuildAction(aiPlayer) {
@@ -444,8 +509,19 @@ function runAiBuildAction(aiPlayer) {
 
   if (aiPlayer.team.length < targetSize) {
     aiPlayer.team.push(chooseAiHero(aiPlayer));
+    mergeAiDuplicates(aiPlayer.team);
   } else if (gameState.round > 1) {
     const replacement = chooseAiHero(aiPlayer);
+    const mergeTarget = aiPlayer.team.find(
+      (hero) => heroCatalogId(hero) === heroCatalogId(replacement)
+        && hero.level === replacement.level
+        && hero.level < MAX_HERO_LEVEL,
+    );
+
+    if (mergeTarget) {
+      aiPlayer.team.push(replacement);
+      mergeAiDuplicates(aiPlayer.team);
+    } else {
     const weakestIndex = aiPlayer.team.reduce((weakest, hero, index, team) => {
       const heroScore = hero.power + hero.health;
       const weakestScore = team[weakest].power + team[weakest].health;
@@ -455,6 +531,7 @@ function runAiBuildAction(aiPlayer) {
 
     if ((replacement.power + replacement.health) > (weakestHero.power + weakestHero.health)) {
       aiPlayer.team[weakestIndex] = replacement;
+    }
     }
   }
 
@@ -500,6 +577,7 @@ function completeAiBuilds() {
   players.filter((player) => !player.isHuman && !player.eliminated).forEach((aiPlayer) => {
     while (aiPlayer.team.length < targetSize) {
       aiPlayer.team.push(chooseAiHero(aiPlayer));
+      mergeAiDuplicates(aiPlayer.team);
     }
     aiPlayer.ready = true;
     aiPlayer.buildStatus = "Squad locked";
@@ -557,6 +635,7 @@ function updateHud() {
   const humanPlayer = getHumanPlayer();
   creditsElement.textContent = gameState.credits;
   unitCountElement.textContent = gameState.team.filter(Boolean).length;
+  sidelineCountElement.textContent = gameState.bench.filter(Boolean).length;
   shopTierElement.textContent = String(gameState.shopTier).padStart(2, "0");
   playerHealthElement.textContent = humanPlayer.hp;
   roundValueElement.textContent = String(gameState.round).padStart(2, "0");
@@ -591,14 +670,20 @@ function updateHud() {
 
 function heroInspectContent(hero) {
   const ability = hero.ability;
+  const level = hero.level || 1;
+  const nextLevel = Math.min(MAX_HERO_LEVEL, level + 1);
+  const nextMultiplier = LEVEL_STAT_MULTIPLIERS[nextLevel - 1];
+  const nextPower = Math.round((hero.basePower ?? hero.power) * nextMultiplier);
+  const nextHealth = Math.round((hero.baseHealth ?? hero.health) * nextMultiplier);
 
   return `
-    <span class="hero-inspect__eyebrow">Hero Dossier</span>
+    <span class="hero-inspect__eyebrow">Hero Dossier // Level ${level}</span>
     <strong class="hero-inspect__name">${hero.name}</strong>
     <span class="hero-inspect__stats">
       <i><b>✦</b> ${hero.power} Power</i>
       <i><b>♥</b> ${hero.health} Health</i>
     </span>
+    <span class="hero-inspect__level-note">${level >= MAX_HERO_LEVEL ? "Maximum level reached" : `Next: ${nextPower} power / ${nextHealth} health`}</span>
     <span class="hero-inspect__ability-type">${ability?.type || "Standard"} Ability</span>
     <strong class="hero-inspect__ability-name">${ability?.name || "Standard Attack"}</strong>
     <span class="hero-inspect__description">${ability?.description || "Attacks the enemy directly."}</span>
@@ -671,6 +756,9 @@ function setShopCardHero(card, catalogHero) {
     ...catalogHero,
     catalogId: catalogHero.id,
     id: shopSlotId,
+    basePower: catalogHero.power,
+    baseHealth: catalogHero.health,
+    level: 1,
     card,
   });
 
@@ -682,10 +770,7 @@ function shuffledHeroes(excludedIds, amount) {
   let candidates = unlockedHeroes.filter((hero) => !excludedIds.has(hero.id));
 
   if (candidates.length < amount) {
-    const protectedIds = new Set(
-      gameState.team.filter(Boolean).map((hero) => hero.catalogId),
-    );
-    candidates = unlockedHeroes.filter((hero) => !protectedIds.has(hero.id));
+    candidates = [...unlockedHeroes];
   }
 
   for (let index = candidates.length - 1; index > 0; index -= 1) {
@@ -715,7 +800,6 @@ function rerollShop() {
   }
 
   const excludedIds = new Set([
-    ...gameState.team.filter(Boolean).map((hero) => hero.catalogId),
     ...[...shopHeroes.values()].map((hero) => hero.catalogId),
   ]);
   const newHeroes = shuffledHeroes(excludedIds, refreshableCards.length);
@@ -763,10 +847,12 @@ function formatBuildTime(seconds) {
 
 function combatHeroMarkup(hero, index) {
   const abilityName = hero.ability?.name || "Standard Attack";
+  const level = hero.level || 1;
 
   return `
     <figure class="combat-unit" data-combat-index="${index}" style="--unit-delay: ${index * 90}ms" title="${abilityName}${hero.ability ? ` — ${hero.ability.description}` : ""}">
       <img src="${hero.image}" alt="${hero.name}">
+      <span class="combat-unit__level">LV ${level}</span>
       <span class="combat-unit__health" aria-hidden="true"><i style="width: 100%"></i></span>
       <figcaption><strong>${hero.name}</strong><em>${abilityName}</em><span>✦ ${hero.power} · ♥ ${hero.health}</span></figcaption>
     </figure>
@@ -1033,7 +1119,7 @@ function startCombatPhase() {
   gameState.phase = "combat";
   document.body.classList.add("combat-phase", "combat-resolving");
   document.body.classList.remove("combat-resolved");
-  teamBoard.hidden = true;
+  deploymentWorkspace.hidden = true;
   combatArena.hidden = false;
   teamKickerElement.innerHTML = "<span>Combat Zone</span> // Round Engagement";
   teamTitleElement.textContent = "Autobattle In Progress";
@@ -1151,7 +1237,7 @@ function completeCombatRound() {
     "combat-defeat",
   );
   combatArena.hidden = true;
-  teamBoard.hidden = false;
+  deploymentWorkspace.hidden = false;
   teamKickerElement.innerHTML = "<span>Squad Deployment</span> // Your Side";
   teamTitleElement.textContent = "Assemble Your Strike Team";
   buildTimerChip.querySelector("small").textContent = "Build Time";
@@ -1164,7 +1250,7 @@ function completeCombatRound() {
     }
   });
   initializeRandomShop();
-  renderTeam();
+  renderRoster();
   startBuildTimer();
   announce(`Round ${gameState.round} build phase started. New credits received.`);
 }
@@ -1254,7 +1340,7 @@ function selectPurchasedHero(heroId) {
 
   announce(
     selectingNewHero
-      ? `${hero.name} selected. Choose an empty team slot.`
+      ? `${hero.name} selected. Choose a squad or sideline slot.`
       : `${hero.name} selection cleared.`,
   );
 }
@@ -1287,7 +1373,7 @@ function purchaseHero(heroId) {
   hero.card.classList.remove("shop-card--locked");
   hero.card.setAttribute(
     "aria-label",
-    `${hero.name} purchased. Drag to an empty team slot or select it and choose a slot.`,
+    `${hero.name} purchased. Drag to a squad or sideline slot, or select it and choose a slot.`,
   );
 
   const buyButton = hero.card.querySelector(".shop-card__buy");
@@ -1297,7 +1383,7 @@ function purchaseHero(heroId) {
 
   updateHud();
   selectPurchasedHero(heroId);
-  announce(`${hero.name} purchased for ${hero.cost} credits. Drag it to the board.`);
+  announce(`${hero.name} purchased for ${hero.cost} credits. Deploy it to your squad or sideline.`);
 }
 
 function emptySlotMarkup(slotIndex) {
@@ -1373,7 +1459,7 @@ function deployPurchasedHero(heroId, slotIndex) {
   hero.card.setAttribute("aria-label", `${hero.name} deployed to team slot ${slotIndex + 1}.`);
   hero.card.setAttribute("aria-pressed", "false");
 
-  renderTeam();
+  renderRoster();
   announce(`${hero.name} deployed to team slot ${slotIndex + 1}.`);
   return true;
 }
@@ -1425,22 +1511,259 @@ function sellTeamHero(slotIndex) {
   announce(`${hero.name} sold for ${sellValue} credits. A replacement offer is available.`);
 }
 
-teamBoard.addEventListener("pointerdown", (event) => {
-  if (event.target.closest(".hero-card__sell")) {
+function getRoster(zone) {
+  return zone === "bench" ? gameState.bench : gameState.team;
+}
+
+function getRosterLabel(zone) {
+  return zone === "bench" ? "sideline" : "team";
+}
+
+function rosterEntries() {
+  return ["team", "bench"].flatMap((zone) => getRoster(zone).map((hero, index) => ({ zone, index, hero })));
+}
+
+function canMergeHeroes(firstHero, secondHero) {
+  return Boolean(firstHero && secondHero)
+    && heroCatalogId(firstHero) === heroCatalogId(secondHero)
+    && (firstHero.level || 1) === (secondHero.level || 1)
+    && (firstHero.level || 1) < MAX_HERO_LEVEL;
+}
+
+function findMergePartner(zone, slotIndex) {
+  const hero = getRoster(zone)[slotIndex];
+  return rosterEntries().find(
+    (entry) => entry.hero
+      && (entry.zone !== zone || entry.index !== slotIndex)
+      && canMergeHeroes(hero, entry.hero),
+  );
+}
+
+function rosterEmptySlotMarkup(slotIndex, zone) {
+  const slotNumber = String(slotIndex + 1).padStart(2, "0");
+  const label = zone === "bench" ? "Reserve Hero" : "Drop Hero";
+
+  return `
+    <span class="team-slot__number">${zone === "bench" ? "R" : ""}${slotNumber}</span>
+    <span class="team-slot__plus" aria-hidden="true">+</span>
+    <span class="team-slot__label">${label}</span>
+  `;
+}
+
+function rosterHeroSellValue(hero) {
+  const copyCount = 2 ** ((hero.level || 1) - 1);
+  return Math.max(1, Math.ceil(hero.cost / 2)) * copyCount;
+}
+
+function rosterHeroMarkup(hero, zone, slotIndex) {
+  const slotNumber = String(slotIndex + 1).padStart(2, "0");
+  const sellValue = rosterHeroSellValue(hero);
+  const tooltipId = `${zone}-hero-inspect-${slotIndex}`;
+  const mergePartner = findMergePartner(zone, slotIndex);
+  const level = hero.level || 1;
+  const levelPips = Array.from(
+    { length: MAX_HERO_LEVEL },
+    (_, index) => `<i class="${index < level ? "is-filled" : ""}"></i>`,
+  ).join("");
+  const mergeButton = mergePartner
+    ? `<button class="hero-card__merge" type="button" data-merge-zone="${zone}" data-merge-slot="${slotIndex}" aria-label="Merge ${hero.name} into level ${level + 1}">Merge <strong>LV ${level + 1}</strong></button>`
+    : "";
+
+  return `
+    <div class="hero-card hero-card--${hero.universe} hero-card--level-${level}${mergePartner ? " hero-card--merge-ready" : ""}" draggable="true" data-roster-zone="${zone}" data-roster-index="${slotIndex}" tabindex="0" role="button" aria-label="Level ${level} ${hero.name} in ${getRosterLabel(zone)} slot ${slotIndex + 1}. Power ${hero.power}, health ${hero.health}. Drag to move or merge." aria-describedby="${tooltipId}">
+      <span class="hero-card__slot">${zone === "bench" ? "R" : ""}${slotNumber}</span>
+      <img src="${hero.image}" alt="${hero.name}">
+      <img class="universe-badge" src="${hero.logo}" alt="">
+      ${hero.ability ? `<span class="hero-card__ability" title="${hero.ability.name}: ${hero.ability.description}" aria-label="${hero.ability.name}: ${hero.ability.description}">A</span>` : ""}
+      <div class="hero-inspect hero-inspect--team" id="${tooltipId}" role="tooltip">${heroInspectContent(hero)}</div>
+      <button class="hero-card__sell" type="button" data-sell-zone="${zone}" data-sell-slot="${slotIndex}" aria-label="Sell ${hero.name} for ${sellValue} credits">Sell <strong>+&#9670; ${sellValue}</strong></button>
+      ${mergeButton}
+      <span class="level-badge">LV ${level}<small>/4</small></span>
+      <span class="hero-card__level-pips" aria-hidden="true">${levelPips}</span>
+      <div class="hero-stats" aria-label="Power ${hero.power}, health ${hero.health}">
+        <span><i class="power-icon">&#10022;</i> ${hero.power}</span>
+        <span><i class="health-icon">&#9829;</i> ${hero.health}</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderRosterZone(zone, slots) {
+  const roster = getRoster(zone);
+
+  slots.forEach((slot, slotIndex) => {
+    const hero = roster[slotIndex];
+    slot.className = `team-slot roster-slot${zone === "bench" ? " bench-slot" : ""}`;
+
+    if (hero) {
+      slot.classList.add("team-slot--occupied");
+      slot.setAttribute("aria-label", `${getRosterLabel(zone)} slot ${slotIndex + 1}: level ${hero.level} ${hero.name}`);
+      slot.removeAttribute("tabindex");
+      slot.innerHTML = rosterHeroMarkup(hero, zone, slotIndex);
+    } else {
+      slot.setAttribute("aria-label", `Empty ${getRosterLabel(zone)} slot ${slotIndex + 1}`);
+      slot.setAttribute("tabindex", "0");
+      slot.innerHTML = rosterEmptySlotMarkup(slotIndex, zone);
+    }
+  });
+}
+
+function renderRoster() {
+  renderRosterZone("team", teamSlots);
+  renderRosterZone("bench", benchSlots);
+  updateHud();
+}
+
+function markShopHeroDeployed(hero, destinationLabel) {
+  gameState.selectedShopId = null;
+  hero.card.dataset.status = "deployed";
+  hero.card.draggable = false;
+  hero.card.classList.remove("shop-card--purchased", "shop-card--selected", "shop-card--dragging");
+  hero.card.classList.add("shop-card--deployed");
+  hero.card.setAttribute("aria-label", `${hero.name} deployed to ${destinationLabel}.`);
+  hero.card.setAttribute("aria-pressed", "false");
+}
+
+function deployPurchasedHeroToRoster(heroId, zone, slotIndex) {
+  const shopHero = shopHeroes.get(heroId);
+  const roster = getRoster(zone);
+  const destinationHero = roster[slotIndex];
+
+  if (!gameState.buildPhaseActive || !shopHero || shopHero.card.dataset.status !== "purchased") {
+    return false;
+  }
+
+  if (destinationHero && !canMergeHeroes(destinationHero, shopHero)) {
+    announce("That slot is occupied. Use an empty slot or a matching level 1 hero.");
+    return false;
+  }
+
+  markHumanNotReady();
+  const destinationLabel = `${getRosterLabel(zone)} slot ${slotIndex + 1}`;
+
+  if (destinationHero) {
+    destinationHero.level = (destinationHero.level || 1) + 1;
+    applyHeroLevelStats(destinationHero);
+    markShopHeroDeployed(shopHero, destinationLabel);
+    renderRoster();
+    announce(`${destinationHero.name} merged to level ${destinationHero.level}. Power and health increased.`);
+    return true;
+  }
+
+  const deployedHero = createHeroInstance(shopHero);
+  roster[slotIndex] = deployedHero;
+  markShopHeroDeployed(shopHero, destinationLabel);
+  renderRoster();
+  announce(`${deployedHero.name} deployed to ${destinationLabel}.`);
+  return true;
+}
+
+function moveRosterHero(fromZone, fromIndex, toZone, toIndex) {
+  if (!gameState.buildPhaseActive || (fromZone === toZone && fromIndex === toIndex)) {
+    return;
+  }
+
+  const sourceRoster = getRoster(fromZone);
+  const destinationRoster = getRoster(toZone);
+  const movingHero = sourceRoster[fromIndex];
+  const destinationHero = destinationRoster[toIndex];
+
+  if (!movingHero) {
+    return;
+  }
+
+  markHumanNotReady();
+
+  if (canMergeHeroes(movingHero, destinationHero)) {
+    destinationHero.level = (destinationHero.level || 1) + 1;
+    applyHeroLevelStats(destinationHero);
+    sourceRoster[fromIndex] = null;
+    renderRoster();
+    announce(`${destinationHero.name} merged to level ${destinationHero.level}. Power and health increased.`);
+    return;
+  }
+
+  destinationRoster[toIndex] = movingHero;
+  sourceRoster[fromIndex] = destinationHero;
+  renderRoster();
+  announce(`${movingHero.name} moved to ${getRosterLabel(toZone)} slot ${toIndex + 1}.`);
+}
+
+function mergeRosterHero(zone, slotIndex) {
+  if (!gameState.buildPhaseActive || gameState.phase !== "build") {
+    return;
+  }
+
+  const roster = getRoster(zone);
+  const hero = roster[slotIndex];
+  const partner = findMergePartner(zone, slotIndex);
+
+  if (!hero || !partner) {
+    announce(hero?.level >= MAX_HERO_LEVEL ? `${hero.name} is already level 4.` : "A matching hero of the same level is required.");
+    return;
+  }
+
+  markHumanNotReady();
+  getRoster(partner.zone)[partner.index] = null;
+  hero.level = (hero.level || 1) + 1;
+  applyHeroLevelStats(hero);
+  renderRoster();
+  announce(`${hero.name} merged to level ${hero.level}. Power increased to ${hero.power} and health to ${hero.health}.`);
+}
+
+function sellRosterHero(zone, slotIndex) {
+  if (!gameState.buildPhaseActive || gameState.phase !== "build") {
+    announce("Heroes can only be sold during the build phase.");
+    return;
+  }
+
+  const roster = getRoster(zone);
+  const hero = roster[slotIndex];
+
+  if (!hero) {
+    return;
+  }
+
+  markHumanNotReady();
+  const sellValue = rosterHeroSellValue(hero);
+  gameState.credits += sellValue;
+  roster[slotIndex] = null;
+
+  if (hero.card?.dataset.heroId === hero.catalogId && hero.card.dataset.status === "deployed") {
+    const excludedIds = new Set([...shopHeroes.values()].map((shopHero) => shopHero.catalogId));
+    const [replacementHero] = shuffledHeroes(excludedIds, 1);
+
+    if (replacementHero) {
+      setShopCardHero(hero.card, replacementHero);
+    }
+  }
+
+  renderRoster();
+  announce(`Level ${hero.level} ${hero.name} sold for ${sellValue} credits.`);
+}
+
+deploymentWorkspace.addEventListener("pointerdown", (event) => {
+  if (event.target.closest(".hero-card__sell, .hero-card__merge")) {
     event.stopPropagation();
   }
 });
 
-teamBoard.addEventListener("click", (event) => {
+deploymentWorkspace.addEventListener("click", (event) => {
   const sellButton = event.target.closest(".hero-card__sell[data-sell-slot]");
+  const mergeButton = event.target.closest(".hero-card__merge[data-merge-slot]");
 
-  if (!sellButton) {
+  if (!sellButton && !mergeButton) {
     return;
   }
 
   event.preventDefault();
   event.stopPropagation();
-  sellTeamHero(Number(sellButton.dataset.sellSlot));
+
+  if (sellButton) {
+    sellRosterHero(sellButton.dataset.sellZone, Number(sellButton.dataset.sellSlot));
+  } else {
+    mergeRosterHero(mergeButton.dataset.mergeZone, Number(mergeButton.dataset.mergeSlot));
+  }
 });
 
 shopCards.forEach((card) => {
@@ -1496,7 +1819,7 @@ shopCards.forEach((card) => {
   card.addEventListener("dragend", () => {
     gameState.drag = null;
     card.classList.remove("shop-card--dragging");
-    teamSlots.forEach((slot) => slot.classList.remove("team-slot--drag-over"));
+    rosterSlots.forEach((slot) => slot.classList.remove("team-slot--drag-over", "team-slot--merge-over"));
   });
 
   card.addEventListener("pointerdown", (event) => {
@@ -1548,13 +1871,17 @@ shopCards.forEach((card) => {
     event.preventDefault();
     pointerDrag.ghost.style.transform = `translate3d(${event.clientX - pointerDrag.width / 2}px, ${event.clientY - pointerDrag.width / 2}px, 0)`;
 
-    const hoveredSlot = document.elementFromPoint(event.clientX, event.clientY)?.closest(".team-slot");
+    const hoveredSlot = document.elementFromPoint(event.clientX, event.clientY)?.closest(".roster-slot");
     const hoveredIndex = hoveredSlot ? Number(hoveredSlot.dataset.slotIndex) : -1;
-    const canDeploy = hoveredSlot && !gameState.team[hoveredIndex];
+    const hoveredZone = hoveredSlot?.dataset.rosterZone;
+    const targetHero = hoveredSlot ? getRoster(hoveredZone)[hoveredIndex] : null;
+    const draggedHero = shopHeroes.get(heroId);
+    const canDeploy = hoveredSlot && (!targetHero || canMergeHeroes(targetHero, draggedHero));
 
-    teamSlots.forEach((slot) => slot.classList.remove("team-slot--drag-over"));
+    rosterSlots.forEach((slot) => slot.classList.remove("team-slot--drag-over", "team-slot--merge-over"));
     pointerDrag.currentSlot = canDeploy ? hoveredSlot : null;
     pointerDrag.currentSlot?.classList.add("team-slot--drag-over");
+    pointerDrag.currentSlot?.classList.toggle("team-slot--merge-over", Boolean(targetHero));
   });
 
   function finishPointerDrag(event) {
@@ -1562,14 +1889,17 @@ shopCards.forEach((card) => {
       return;
     }
 
-    const releasedOverSlot = document.elementFromPoint(event.clientX, event.clientY)?.closest(".team-slot");
+    const releasedOverSlot = document.elementFromPoint(event.clientX, event.clientY)?.closest(".roster-slot");
     const releasedSlotIndex = releasedOverSlot ? Number(releasedOverSlot.dataset.slotIndex) : -1;
+    const releasedZone = releasedOverSlot?.dataset.rosterZone;
+    const releasedHero = releasedOverSlot ? getRoster(releasedZone)[releasedSlotIndex] : null;
+    const draggedHero = shopHeroes.get(heroId);
     const targetSlot = pointerDrag.currentSlot
-      || (releasedOverSlot && !gameState.team[releasedSlotIndex] ? releasedOverSlot : null);
+      || (releasedOverSlot && (!releasedHero || canMergeHeroes(releasedHero, draggedHero)) ? releasedOverSlot : null);
     const wasDragging = Boolean(pointerDrag.ghost);
     pointerDrag.ghost?.remove();
     card.classList.remove("shop-card--dragging");
-    teamSlots.forEach((slot) => slot.classList.remove("team-slot--drag-over"));
+    rosterSlots.forEach((slot) => slot.classList.remove("team-slot--drag-over", "team-slot--merge-over"));
 
     if (card.hasPointerCapture(event.pointerId)) {
       card.releasePointerCapture(event.pointerId);
@@ -1583,7 +1913,7 @@ shopCards.forEach((card) => {
     }
 
     if (targetSlot) {
-      deployPurchasedHero(heroId, Number(targetSlot.dataset.slotIndex));
+      deployPurchasedHeroToRoster(heroId, targetSlot.dataset.rosterZone, Number(targetSlot.dataset.slotIndex));
     }
   }
 
@@ -1593,10 +1923,10 @@ shopCards.forEach((card) => {
   window.addEventListener("pointercancel", finishPointerDrag);
 });
 
-teamBoard.addEventListener("dragstart", (event) => {
-  const heroCard = event.target.closest(".hero-card[data-team-slot]");
+deploymentWorkspace.addEventListener("dragstart", (event) => {
+  const heroCard = event.target.closest(".hero-card[data-roster-zone]");
 
-  if (event.target.closest(".hero-card__sell")) {
+  if (event.target.closest(".hero-card__sell, .hero-card__merge")) {
     event.preventDefault();
     return;
   }
@@ -1605,20 +1935,22 @@ teamBoard.addEventListener("dragstart", (event) => {
     return;
   }
 
-  const slotIndex = Number(heroCard.dataset.teamSlot);
-  gameState.drag = { type: "team", slotIndex };
+  const zone = heroCard.dataset.rosterZone;
+  const slotIndex = Number(heroCard.dataset.rosterIndex);
+  gameState.drag = { type: "roster", zone, slotIndex };
   heroCard.classList.add("hero-card--dragging");
   event.dataTransfer.effectAllowed = "move";
-  event.dataTransfer.setData("text/plain", `team:${slotIndex}`);
+  event.dataTransfer.setData("text/plain", `${zone}:${slotIndex}`);
 });
 
-teamBoard.addEventListener("dragend", (event) => {
+deploymentWorkspace.addEventListener("dragend", (event) => {
   event.target.closest(".hero-card")?.classList.remove("hero-card--dragging");
   gameState.drag = null;
-  teamSlots.forEach((slot) => slot.classList.remove("team-slot--drag-over"));
+  rosterSlots.forEach((slot) => slot.classList.remove("team-slot--drag-over", "team-slot--merge-over"));
 });
 
-teamSlots.forEach((slot) => {
+rosterSlots.forEach((slot) => {
+  const zone = slot.dataset.rosterZone;
   const slotIndex = Number(slot.dataset.slotIndex);
 
   slot.addEventListener("dragover", (event) => {
@@ -1626,45 +1958,55 @@ teamSlots.forEach((slot) => {
       return;
     }
 
-    const canDropShopHero = gameState.drag.type === "shop" && !gameState.team[slotIndex];
-    const canMoveTeamHero = gameState.drag.type === "team";
+    const destinationHero = getRoster(zone)[slotIndex];
+    const shopHero = gameState.drag.type === "shop" ? shopHeroes.get(gameState.drag.heroId) : null;
+    const canDropShopHero = gameState.drag.type === "shop"
+      && (!destinationHero || canMergeHeroes(destinationHero, shopHero));
+    const canMoveRosterHero = gameState.drag.type === "roster";
 
-    if (canDropShopHero || canMoveTeamHero) {
+    if (canDropShopHero || canMoveRosterHero) {
       event.preventDefault();
       event.dataTransfer.dropEffect = "move";
       slot.classList.add("team-slot--drag-over");
+
+      if (canDropShopHero && destinationHero) {
+        slot.classList.add("team-slot--merge-over");
+      } else if (canMoveRosterHero) {
+        const movingHero = getRoster(gameState.drag.zone)[gameState.drag.slotIndex];
+        slot.classList.toggle("team-slot--merge-over", canMergeHeroes(movingHero, destinationHero));
+      }
     }
   });
 
   slot.addEventListener("dragleave", (event) => {
     if (!slot.contains(event.relatedTarget)) {
-      slot.classList.remove("team-slot--drag-over");
+      slot.classList.remove("team-slot--drag-over", "team-slot--merge-over");
     }
   });
 
   slot.addEventListener("drop", (event) => {
     event.preventDefault();
-    slot.classList.remove("team-slot--drag-over");
+    slot.classList.remove("team-slot--drag-over", "team-slot--merge-over");
 
     if (gameState.drag?.type === "shop") {
-      deployPurchasedHero(gameState.drag.heroId, slotIndex);
-    } else if (gameState.drag?.type === "team") {
-      moveTeamHero(gameState.drag.slotIndex, slotIndex);
+      deployPurchasedHeroToRoster(gameState.drag.heroId, zone, slotIndex);
+    } else if (gameState.drag?.type === "roster") {
+      moveRosterHero(gameState.drag.zone, gameState.drag.slotIndex, zone, slotIndex);
     }
 
     gameState.drag = null;
   });
 
   slot.addEventListener("click", () => {
-    if (gameState.selectedShopId && !gameState.team[slotIndex]) {
-      deployPurchasedHero(gameState.selectedShopId, slotIndex);
+    if (gameState.selectedShopId) {
+      deployPurchasedHeroToRoster(gameState.selectedShopId, zone, slotIndex);
     }
   });
 
   slot.addEventListener("keydown", (event) => {
     if ((event.key === "Enter" || event.key === " ") && gameState.selectedShopId) {
       event.preventDefault();
-      deployPurchasedHero(gameState.selectedShopId, slotIndex);
+      deployPurchasedHeroToRoster(gameState.selectedShopId, zone, slotIndex);
     }
   });
 });
@@ -1684,7 +2026,7 @@ document.addEventListener("keydown", handleModalKeyboard);
 async function initializeGame() {
   await Promise.all([assignRandomAiNames(), loadHeroAbilities()]);
   initializeRandomShop();
-  renderTeam();
+  renderRoster();
   startBuildTimer();
 }
 
