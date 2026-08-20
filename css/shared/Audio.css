@@ -225,8 +225,8 @@
 
 @media (max-width: 600px) {
   .prw-audio-dock {
-    right: 9px;
-    bottom: 9px;
+    right: max(9px, env(safe-area-inset-right));
+    bottom: max(9px, env(safe-area-inset-bottom));
   }
 
   .prw-audio-dock__toggle {
