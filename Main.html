@@ -192,55 +192,82 @@
   <section class="arcade-menu" id="ArcadeMenu" aria-labelledby="ArcadeMenuTitle" aria-hidden="true" hidden>
     <button class="arcade-menu__backdrop" type="button" data-arcade-close aria-label="Close Arcade menu"></button>
     <article class="arcade-menu__panel" role="dialog" aria-modal="true" aria-describedby="ArcadeMenuDescription">
+      <div class="arcade-menu__atmosphere" aria-hidden="true"><i></i><i></i><b>ARCADE</b></div>
+
       <header class="arcade-menu__header">
-        <div>
-          <span>PRW // Alternate Protocols</span>
-          <h2 id="ArcadeMenuTitle">Arcade</h2>
-          <p id="ArcadeMenuDescription">Break the standard rules. Choose a combat experiment.</p>
+        <div class="arcade-menu__brand" aria-hidden="true"><span>PRW</span><i></i></div>
+        <div class="arcade-menu__heading">
+          <span>PRW Network // Alternate Reality Channel</span>
+          <h2 id="ArcadeMenuTitle">Arcade <em>Protocols</em></h2>
+          <p id="ArcadeMenuDescription">Standard combat rules suspended. Select an experiment and rewrite the arena.</p>
+        </div>
+        <div class="arcade-menu__network" aria-label="Arcade network status">
+          <span><i></i> Network Live</span>
+          <b>02</b>
+          <small>Playable Protocols</small>
         </div>
         <button type="button" class="arcade-menu__close" data-arcade-close aria-label="Close Arcade menu">×</button>
       </header>
 
+      <div class="arcade-menu__selector" aria-hidden="true">
+        <span><b>Mode Select</b> // Choose Your Anomaly</span>
+        <i></i>
+        <em>Channel 8.21.26</em>
+      </div>
+
       <div class="arcade-menu__grid">
         <a class="arcade-mode-card arcade-mode-card--ability" href="AbilityDraft.html">
-          <span class="arcade-mode-card__number">01</span>
+          <span class="arcade-mode-card__topline"><b>01</b><i></i><em>Experiment Stable</em></span>
           <span class="arcade-mode-card__art" aria-hidden="true">
             <img src="Img/Characters/MarvelRivals/HulkPNG.jpeg" alt="">
             <img src="Img/Characters/Overwatch/TracerPNG.png" alt="">
             <img src="Img/Characters/Paladins/SerisPNG.png" alt="">
+            <b>FUSE</b>
           </span>
           <span class="arcade-mode-card__content">
-            <small>Featured Mode // Live</small>
-            <strong>Ability Draft</strong>
-            <span>Draft any ability onto any hero and create impossible builds.</span>
+            <small>Draft // Merge // Improvise</small>
+            <strong>Ability <em>Draft</em></strong>
+            <span>Steal powers from across all three worlds, fuse impossible loadouts, and outbuild 1 adaptive rival.</span>
+            <span class="arcade-mode-card__features"><i>Ability Fusion</i><i>Hero Merging</i><i>1 AI Rival</i></span>
+            <span class="arcade-mode-card__meta"><b><small>Format</small>Solo Gauntlet</b><b><small>Formation</small>6 Units</b><b><small>Difficulty</small>Dynamic</b></span>
             <b>Enter Mode <i aria-hidden="true">➜</i></b>
           </span>
         </a>
 
-        <article class="arcade-mode-card arcade-mode-card--locked" aria-disabled="true">
-          <span class="arcade-mode-card__number">02</span>
-          <span class="arcade-mode-card__content">
-            <small>Protocol Locked</small>
-            <strong>Incoming Mode</strong>
-            <span>A new multiverse experiment will occupy this channel.</span>
-            <b>Coming Soon</b>
+        <a class="arcade-mode-card arcade-mode-card--leader" href="LeaderProtocol.html">
+          <span class="arcade-mode-card__topline"><b>02</b><i></i><em>New Signal</em></span>
+          <span class="arcade-mode-card__art" aria-hidden="true">
+            <img src="Img/Characters/MarvelRivals/IronManPNG.jpeg" alt="">
+            <img src="Img/Characters/Overwatch/TracerPNG.png" alt="">
+            <img src="Img/Characters/Paladins/RaumPNG.png" alt="">
+            <b>LEAD</b>
           </span>
-        </article>
+          <span class="arcade-mode-card__content">
+            <small>Command // Synergize // Ascend</small>
+            <strong>Leader <em>Protocol</em></strong>
+            <span>Install a hyper-powered commander, obey their doctrine, and turn a synchronized formation into a weapon.</span>
+            <span class="arcade-mode-card__features"><i>Command Auras</i><i>Leader Ascension</i><i>7 AI Rivals</i></span>
+            <span class="arcade-mode-card__meta"><b><small>Format</small>Leader Run</b><b><small>Formation</small>6 Units</b><b><small>Difficulty</small>Strategic</b></span>
+            <b>Choose Your Leader <i aria-hidden="true">&#10140;</i></b>
+          </span>
+        </a>
 
         <article class="arcade-mode-card arcade-mode-card--locked" aria-disabled="true">
-          <span class="arcade-mode-card__number">03</span>
+          <span class="arcade-mode-card__lock-signal" aria-hidden="true"><i></i><b>03</b><i></i></span>
           <span class="arcade-mode-card__content">
-            <small>Protocol Locked</small>
-            <strong>Incoming Mode</strong>
-            <span>Future game modes can be added here without changing the menu.</span>
-            <b>Coming Soon</b>
+            <small>Encrypted Transmission // Protocol 03</small>
+            <strong>Unknown <em>Anomaly</em></strong>
+            <span>A third experiment is forming beyond the multiverse boundary. Signal details remain classified.</span>
+            <b class="arcade-mode-card__action">Signal Locked <i aria-hidden="true">⌁</i></b>
           </span>
+          <span class="arcade-mode-card__cipher" aria-hidden="true">0X3 // ????? // SYNC FAILED</span>
         </article>
       </div>
 
       <footer class="arcade-menu__footer">
-        <span><i></i> Arcade network online</span>
-        <b>1 mode available</b>
+        <span><i></i> Arcade network synchronized <b>2/3 channels online</b></span>
+        <span class="arcade-menu__legend"><i></i>Live <i></i>New <i></i>Encrypted</span>
+        <b>Esc // Close Terminal</b>
       </footer>
     </article>
   </section>

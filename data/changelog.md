@@ -2,9 +2,31 @@
 
 # PalaRivals Watch Development Archive
 
+## Version 0.3.0 — Leader Protocol
+Date: August 21, 2026
+Status: Current Build
+
+### New Arcade Mode
+- Added **Leader Protocol**, a complete new Arcade mode with its own HTML, CSS, JavaScript, and balance data.
+- Choose one of three random hyper-powered leaders at the start of every run.
+- Build a six-unit formation against seven uniquely named AI commanders.
+- Leader auras buff Inspired heroes and penalize Conflict heroes based on their universe, playstyle, and class tags.
+- Added Command Link breakpoints at 2, 4, and 6 matching units.
+- Leaders Ascend every third round, increasing their power, health, and signature ability output.
+- AI commanders choose heroes that complement their own leader instead of building randomly.
+- Added formation reordering, selling, rerolls, combat inspection, animated leader abilities, and elimination rounds.
+
+> The crown is powerful, but a formation that ignores its doctrine can be weaker than the sum of its parts.
+
+### Arcade Interface
+- Rebuilt the Arcade selector as a full alternate-reality command terminal.
+- Added richer mode summaries, feature tags, format details, animated protocol cards, live channel telemetry, and an encrypted upcoming-mode signal.
+- Added unique Arcade color treatments for the default, Marvel Rivals, Paladins, and Overwatch menu themes.
+- Improved keyboard focus, short-screen scrolling, and mobile stacking for the mode selector.
+
 ## Version 0.2.0 — Ability Draft & Balance Changes
 Date: August 20, 2026
-Status: Current Build
+Status: Previous Build
 
 ### Ability Draft
 - Added six-slot hero repositioning and occupied-slot swapping.
