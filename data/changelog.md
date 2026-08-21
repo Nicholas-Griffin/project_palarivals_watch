@@ -2,7 +2,7 @@
 
 # PalaRivals Watch Development Archive
 
-## Version 0.8.0 — Ability Draft Evolution & Balance Changes
+## Version 0.2.0 — Ability Draft Evolution & Balance Changes
 Date: August 20, 2026
 Status: Current Build
 
@@ -14,11 +14,17 @@ Status: Current Build
 - AI opponents can create leveled heroes and fused ability combinations.
 - Added complete hover, focus, and mobile-tap information panels for every unit.
 
+> Ability Draft remains an experimental Arcade mode and will continue receiving balance changes.
+
 ### Interface
 - Added clearer merge targets, level indicators, progression displays, and fusion styling.
 - Improved the Ability Draft layout on desktop and mobile screens.
 
-> Ability Draft remains an experimental Arcade mode and will continue receiving balance changes.
+### Match Intelligence
+- Added live opponent scouting from the combatant leaderboard, including formations, hero levels, squad totals, and detected traits.
+- Added after-action combat recaps with damage, damage taken, healing, eliminations, critical hits, dodges, ability activations, and survival data for every hero.
+- Expanded spectator mode into a live command center: watch every surviving AI build its squad, then follow every remaining battle at the same time.
+- AI commanders now recruit, merge, and lock in their teams much faster during the build phase.
 
 ### Balance Changes
 
