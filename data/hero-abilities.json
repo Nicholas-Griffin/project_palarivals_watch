@@ -10,7 +10,7 @@
     "genji": { "name": "Deflect", "type": "Reaction", "description": "Has an 18% chance to dodge and reflects 2 damage whenever struck.", "effects": { "dodgeChance": 0.18, "thorns": 2 } },
     "junkrat": { "name": "Total Mayhem", "type": "Reaction", "description": "Returns 3 explosive damage whenever an enemy lands a hit.", "effects": { "thorns": 3 } },
     "roadhog": { "name": "Take a Breather", "type": "Passive", "description": "Gains 3 maximum health and heals for 35% of damage dealt.", "effects": { "bonusHealth": 3, "lifesteal": 0.35 } },
-    "tracer": { "name": "Blink Recall", "type": "Reaction", "description": "Has a 20% chance to dodge and deals 2 bonus damage on her first strike.", "effects": { "dodgeChance": 0.20, "firstStrikeBonus": 2 } },
+    "tracer": { "name": "Blink Recall", "type": "Reaction", "description": "Has a 18% chance to dodge and deals 2 bonus damage on her first strike.", "effects": { "dodgeChance": 0.18, "firstStrikeBonus": 2 } },
     "bomb-king": { "name": "Royal Detonation", "type": "Attack", "description": "Gains 20% critical chance and critical hits deal 4 additional damage.", "effects": { "critChance": 0.2, "critDamage": 4 } },
     "drogoz": { "name": "Dragon Punch", "type": "Attack", "description": "His opening attack deals 6 bonus damage.", "effects": { "firstStrikeBonus": 6 } },
     "moji": { "name": "Familiar Feast", "type": "Attack", "description": "Deals 8 bonus damage to enemies at or below 50% health.", "effects": { "executeThreshold": 0.5, "executeBonus": 8 } },

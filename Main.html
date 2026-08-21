@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="css/main/Main.css">
   <link rel="stylesheet" href="css/main/Auth.css">
   <link rel="stylesheet" href="css/main/Arcade.css">
+  <link rel="stylesheet" href="css/main/Changelog.css">
   <link rel="stylesheet" href="css/shared/Audio.css">
   <meta name="description" content="Main menu for PalaRivals Watch.">
   <script>
@@ -35,6 +36,12 @@
     <button class="AccountButtons" id="LoginButton" type="button" aria-controls="prwLoginPanel" aria-expanded="false">Log In</button>
     <button class="AccountButtons hidden" id="AccountButton" type="button">Account</button>
   </section>
+
+  <button class="ChangeLogShortcut" id="ChangeLogButton" type="button" aria-controls="ChangeLogMenu" aria-expanded="false">
+    <span class="ChangeLogShortcut__icon" aria-hidden="true">CL</span>
+    <b>Change Log</b>
+    <i aria-hidden="true">NEW</i>
+  </button>
 
   <main class="menu-shell">
     <section class="menu-panel" aria-labelledby="MainMenuTitle">
@@ -234,6 +241,35 @@
       <footer class="arcade-menu__footer">
         <span><i></i> Arcade network online</span>
         <b>1 mode available</b>
+      </footer>
+    </article>
+  </section>
+
+  <section class="changelog-menu" id="ChangeLogMenu" aria-labelledby="ChangeLogTitle" aria-hidden="true" hidden>
+    <button class="changelog-menu__backdrop" type="button" data-changelog-close aria-label="Close change log"></button>
+    <article class="changelog-menu__panel" role="dialog" aria-modal="true" aria-describedby="ChangeLogDescription">
+      <header class="changelog-menu__header">
+        <div class="changelog-menu__brand" aria-hidden="true"><span>PRW</span><i></i></div>
+        <div>
+          <span>Development Archive // Live Build</span>
+          <h2 id="ChangeLogTitle">Change Log</h2>
+          <p id="ChangeLogDescription">Updates, balance changes, and new multiverse systems.</p>
+        </div>
+        <button type="button" class="changelog-menu__close" data-changelog-close aria-label="Close change log">&times;</button>
+      </header>
+
+      <div class="changelog-menu__status" aria-hidden="true">
+        <span><i></i> Archive synchronized</span>
+        <b>PATCH FEED // ONLINE</b>
+      </div>
+
+      <div class="changelog-menu__content" id="ChangeLogContent" aria-live="polite" aria-busy="true">
+        <div class="changelog-menu__loading"><i></i><span>Loading development archiveâ€¦</span></div>
+      </div>
+
+      <footer class="changelog-menu__footer">
+        <span>Edit this feed in <code>data/changelog.md</code></span>
+        <b id="ChangeLogEntryCount">Synchronizing</b>
       </footer>
     </article>
   </section>

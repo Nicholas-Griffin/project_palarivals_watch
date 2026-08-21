@@ -69,10 +69,16 @@ const usernameInput = document.querySelector("#prwUsernameInput");
 const arcadeButton = document.querySelector("#ArcadeButton");
 const arcadeMenu = document.querySelector("#ArcadeMenu");
 const arcadeCloseButtons = [...document.querySelectorAll("[data-arcade-close]")];
+const changeLogButton = document.querySelector("#ChangeLogButton");
+const changeLogMenu = document.querySelector("#ChangeLogMenu");
+const changeLogContent = document.querySelector("#ChangeLogContent");
+const changeLogEntryCount = document.querySelector("#ChangeLogEntryCount");
+const changeLogCloseButtons = [...document.querySelectorAll("[data-changelog-close]")];
 
 let transitionTimer;
 let authMenuTrigger = null;
 let arcadeMenuTrigger = null;
+let changeLogMenuTrigger = null;
 
 function readSavedColorMode() {
   try {
@@ -158,6 +164,7 @@ function openAuthMenu(mode, trigger) {
   const isSignup = mode === "signup";
 
   closeArcadeMenu({ restoreFocus: false });
+  closeChangeLog({ restoreFocus: false });
   authMenuTrigger = trigger;
   loginPanel.dataset.authMode = isSignup ? "signup" : "login";
   authKicker.textContent = isSignup ? "New Challenger Registration" : "Account Uplink";
@@ -191,6 +198,7 @@ function closeAuthMenu() {
 
 function openArcadeMenu(trigger) {
   closeAuthMenu();
+  closeChangeLog({ restoreFocus: false });
   arcadeMenuTrigger = trigger;
   arcadeMenu.hidden = false;
   arcadeMenu.setAttribute("aria-hidden", "false");
@@ -218,15 +226,152 @@ function closeArcadeMenu({ restoreFocus = true } = {}) {
   arcadeMenuTrigger = null;
 }
 
+function escapeChangeLogHtml(value) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function formatChangeLogInline(value) {
+  return escapeChangeLogHtml(value)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/`(.+?)`/g, "<code>$1</code>");
+}
+
+function renderChangeLog(markdown) {
+  const lines = markdown.replace(/\r/g, "").split("\n");
+  const output = [];
+  let listOpen = false;
+  let entryOpen = false;
+  let entryCount = 0;
+
+  const closeList = () => {
+    if (!listOpen) return;
+    output.push("</ul>");
+    listOpen = false;
+  };
+
+  const closeEntry = () => {
+    closeList();
+    if (!entryOpen) return;
+    output.push("</article>");
+    entryOpen = false;
+  };
+
+  lines.forEach((rawLine) => {
+    const line = rawLine.trim();
+    if (!line || (line.startsWith("<!--") && line.endsWith("-->"))) {
+      closeList();
+      return;
+    }
+
+    if (line === "---") {
+      closeEntry();
+      return;
+    }
+
+    if (line.startsWith("## ")) {
+      closeEntry();
+      entryCount += 1;
+      entryOpen = true;
+      output.push(`<article class="changelog-entry${entryCount === 1 ? " changelog-entry--latest" : ""}"><header><span>${String(entryCount).padStart(2, "0")}</span><h3>${formatChangeLogInline(line.slice(3))}</h3>${entryCount === 1 ? "<b>Latest</b>" : ""}</header>`);
+      return;
+    }
+
+    if (!entryOpen && line.startsWith("# ")) {
+      output.push(`<div class="changelog-intro"><h3>${formatChangeLogInline(line.slice(2))}</h3></div>`);
+      return;
+    }
+
+    if (!entryOpen) return;
+
+    if (line.startsWith("Date:")) {
+      closeList();
+      output.push(`<time>${formatChangeLogInline(line.slice(5).trim())}</time>`);
+    } else if (line.startsWith("Status:")) {
+      closeList();
+      output.push(`<span class="changelog-entry__status">${formatChangeLogInline(line.slice(7).trim())}</span>`);
+    } else if (line.startsWith("### ")) {
+      closeList();
+      output.push(`<h4>${formatChangeLogInline(line.slice(4))}</h4>`);
+    } else if (line.startsWith("- ")) {
+      if (!listOpen) {
+        output.push("<ul>");
+        listOpen = true;
+      }
+      output.push(`<li>${formatChangeLogInline(line.slice(2))}</li>`);
+    } else if (line.startsWith("> ")) {
+      closeList();
+      output.push(`<blockquote>${formatChangeLogInline(line.slice(2))}</blockquote>`);
+    } else {
+      closeList();
+      output.push(`<p>${formatChangeLogInline(line)}</p>`);
+    }
+  });
+
+  closeEntry();
+  return { html: output.join(""), entryCount };
+}
+
+async function loadChangeLog() {
+  changeLogContent.setAttribute("aria-busy", "true");
+  changeLogContent.innerHTML = '<div class="changelog-menu__loading"><i></i><span>Loading development archiveâ€¦</span></div>';
+  changeLogEntryCount.textContent = "Synchronizing";
+
+  try {
+    const response = await fetch("data/changelog.md", { cache: "no-store" });
+    if (!response.ok) throw new Error(`Change log request failed with ${response.status}`);
+    const rendered = renderChangeLog(await response.text());
+    changeLogContent.innerHTML = rendered.html || '<div class="changelog-menu__empty">No change log entries have been published yet.</div>';
+    changeLogEntryCount.textContent = `${rendered.entryCount} ${rendered.entryCount === 1 ? "entry" : "entries"} archived`;
+  } catch (error) {
+    console.error("Unable to load the change log.", error);
+    changeLogContent.innerHTML = '<div class="changelog-menu__error"><strong>Archive unavailable</strong><span>Make sure <code>data/changelog.md</code> exists and the site is running through a web server.</span></div>';
+    changeLogEntryCount.textContent = "Feed offline";
+  } finally {
+    changeLogContent.setAttribute("aria-busy", "false");
+  }
+}
+
+function openChangeLog(trigger) {
+  closeAuthMenu();
+  closeArcadeMenu({ restoreFocus: false });
+  changeLogMenuTrigger = trigger;
+  changeLogMenu.hidden = false;
+  changeLogMenu.setAttribute("aria-hidden", "false");
+  changeLogButton?.setAttribute("aria-expanded", "true");
+  body.classList.add("changelog-menu-open");
+  window.PRWAudio?.play("modalOpen");
+  loadChangeLog();
+  window.requestAnimationFrame(() => changeLogMenu.querySelector(".changelog-menu__close")?.focus());
+}
+
+function closeChangeLog({ restoreFocus = true } = {}) {
+  if (!changeLogMenu || changeLogMenu.hidden) return;
+  changeLogMenu.hidden = true;
+  changeLogMenu.setAttribute("aria-hidden", "true");
+  changeLogButton?.setAttribute("aria-expanded", "false");
+  body.classList.remove("changelog-menu-open");
+  window.PRWAudio?.play("modalClose");
+  if (restoreFocus) changeLogMenuTrigger?.focus();
+  changeLogMenuTrigger = null;
+}
+
 signupButton?.addEventListener("click", () => openAuthMenu("signup", signupButton));
 loginButton?.addEventListener("click", () => openAuthMenu("login", loginButton));
 authCloseButtons.forEach((closeButton) => closeButton.addEventListener("click", closeAuthMenu));
 arcadeButton?.addEventListener("click", () => openArcadeMenu(arcadeButton));
 arcadeCloseButtons.forEach((closeButton) => closeButton.addEventListener("click", closeArcadeMenu));
+changeLogButton?.addEventListener("click", () => openChangeLog(changeLogButton));
+changeLogCloseButtons.forEach((closeButton) => closeButton.addEventListener("click", closeChangeLog));
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeAuthMenu();
     closeArcadeMenu();
+    closeChangeLog();
   }
 });
 
