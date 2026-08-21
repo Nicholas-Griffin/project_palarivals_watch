@@ -18,6 +18,8 @@
 <body data-audio-scene="build">
   <div class="draft-world" aria-hidden="true">
     <i></i><i></i><i></i>
+    <span class="draft-world__mark">AD</span>
+    <span class="draft-world__coordinates">SECTOR 07 // POWER ROUTING MATRIX</span>
   </div>
 
   <header class="draft-command-bar">
@@ -41,12 +43,21 @@
     <button class="draft-rules-button" id="rulesButton" type="button" aria-expanded="false" aria-controls="rulesPanel">How to Play</button>
   </header>
 
+  <div class="draft-protocol-strip" aria-hidden="true">
+    <span><b>01</b> Recruit Chassis</span>
+    <i></i>
+    <span><b>02</b> Steal Ability</span>
+    <i></i>
+    <span><b>03</b> Fuse Loadout</span>
+    <em><u></u> Mutation channel stable</em>
+  </div>
+
   <main class="draft-shell">
     <section class="draft-build" id="buildView" aria-labelledby="draftTitle">
       <header class="draft-build__header">
         <div>
           <p><span>Arcade // Experimental Loadouts</span></p>
-          <h1 id="draftTitle">Steal the Power.<br>Rewrite the Hero.</h1>
+          <h1 id="draftTitle"><span>Steal the Power.</span><span>Rewrite the Hero.</span></h1>
           <p class="draft-build__copy">Recruit heroes, select one on your board, then draft any ability onto them. Native abilities are disabled here.</p>
         </div>
         <div class="draft-build__actions">
@@ -97,19 +108,20 @@
     <section class="draft-combat" id="combatView" aria-labelledby="combatTitle" hidden>
       <header class="draft-combat__header">
         <span><i></i> Live Experiment</span>
-        <div><small>Arcade Combat</small><h1 id="combatTitle">Loadouts Engaged</h1></div>
+        <div><small>Fracture Arena // Power Collision</small><h1 id="combatTitle">Powers Unleashed</h1></div>
         <b id="combatRound">Round 01</b>
       </header>
 
       <div class="draft-combat__arena">
+        <div class="draft-combat__collision" aria-hidden="true"><i></i><b>Ability Clash</b><i></i></div>
         <div class="draft-combat__fx" id="combatFx" aria-hidden="true"></div>
         <article class="draft-combat__side draft-combat__side--player">
-          <header><span>Your Team</span><strong>You</strong><b><i id="playerUnitsLeft">0</i> active</b></header>
+          <header><span>Allied Experiment</span><strong>You</strong><b><i id="playerUnitsLeft">0</i> active</b></header>
           <div class="draft-combat__team" id="playerCombatTeam"></div>
         </article>
         <div class="draft-combat__versus" aria-hidden="true"><span>VS</span></div>
         <article class="draft-combat__side draft-combat__side--enemy">
-          <header><span>Draft Rival</span><strong id="enemyName">Arcade AI</strong><b><i id="enemyUnitsLeft">0</i> active</b></header>
+          <header><span>Hostile Experiment</span><strong id="enemyName">Arcade AI</strong><b><i id="enemyUnitsLeft">0</i> active</b></header>
           <div class="draft-combat__team" id="enemyCombatTeam"></div>
         </article>
       </div>

@@ -2,7 +2,7 @@
 
 # PalaRivals Watch Development Archive
 
-## Version 0.2.0 — Ability Draft Evolution & Balance Changes
+## Version 0.2.0 — Ability Draft & Balance Changes
 Date: August 20, 2026
 Status: Current Build
 

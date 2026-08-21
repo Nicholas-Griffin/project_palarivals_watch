@@ -833,6 +833,8 @@ function combatUnitMarkup(fighter) {
   return `
     <figure class="combat-draft-unit" data-side="${fighter.side}" data-index="${fighter.index}" data-inspect-kind="combat" data-inspect-side="${fighter.side}" data-inspect-index="${fighter.index}" tabindex="0" aria-describedby="unitInspector">
       <img src="${fighter.image}" alt="${fighter.name}">
+      <span class="combat-draft-unit__index">UNIT ${String(fighter.index + 1).padStart(2, "0")}</span>
+      <span class="combat-draft-unit__reticle" aria-hidden="true"></span>
       <span class="combat-draft-unit__level">LV ${fighter.level || 1}</span>
       <span class="combat-draft-unit__ability${equippedAbilityCount > 1 ? " combat-draft-unit__ability--fusion" : ""}">${equippedAbilityCount > 1 ? `FUSION ×${equippedAbilityCount} // ` : ""}${fighter.ability?.name || "Basic loadout"}</span>
       <span class="combat-draft-unit__health"><i></i><b>${fighter.maxHealth}</b></span>
