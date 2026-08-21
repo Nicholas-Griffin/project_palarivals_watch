@@ -65,8 +65,13 @@
       <section class="draft-board-section" aria-labelledby="boardTitle">
         <header>
           <div><small>Formation // Alpha</small><h2 id="boardTitle">Your Strike Team</h2></div>
-          <p>Click a hero to select them. Every hero can equip exactly one drafted ability.</p>
+          <p>Drag heroes to reposition or combine matching copies. Every hero can equip one drafted ability.</p>
         </header>
+        <div class="draft-board-legend" aria-label="Board controls">
+          <span><i>↔</i><b>Reposition</b> Drag or use Move / Swap</span>
+          <span><i>⇧</i><b>Merge</b> Combine 2 matching levels</span>
+          <span><i>04</i><b>Power Cap</b> Maximum hero level</span>
+        </div>
         <div class="draft-board" id="teamBoard" aria-label="Six Ability Draft team slots"></div>
       </section>
 
@@ -124,6 +129,9 @@
         <li><b>Recruit.</b><span>Buy heroes from the Hero Shop. They arrive with no ability.</span></li>
         <li><b>Select.</b><span>Click a hero on your six-slot board to open their loadout channel.</span></li>
         <li><b>Draft.</b><span>Install any offered ability, even if it belongs to another universe.</span></li>
+        <li><b>Inspect.</b><span>Hover, focus, or tap a unit to see its full stats, equipped powers, and every combat effect.</span></li>
+        <li><b>Reposition.</b><span>Drag heroes between board slots or use the Move / Swap control on mobile.</span></li>
+        <li><b>Merge.</b><span>Combine two matching heroes of the same level to increase power and health. Different equipped abilities fuse and remain active, up to level 4.</span></li>
         <li><b>Fight.</b><span>Ready up or wait for the timer. Your custom builds battle an AI draft rival.</span></li>
       </ol>
     </article>
@@ -138,6 +146,8 @@
       <button id="continueButton" type="button">Continue Drafting <i>➜</i></button>
     </article>
   </section>
+
+  <aside class="draft-unit-inspector" id="unitInspector" role="tooltip" aria-live="polite" hidden></aside>
 
   <p class="draft-announcer" id="gameAnnouncer" role="status" aria-live="polite"></p>
 
