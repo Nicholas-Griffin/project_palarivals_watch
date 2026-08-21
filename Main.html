@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/main/Auth.css">
   <link rel="stylesheet" href="css/main/Arcade.css">
   <link rel="stylesheet" href="css/main/Changelog.css">
+  <link rel="stylesheet" href="css/main/Suggestions.css">
   <link rel="stylesheet" href="css/shared/Audio.css">
   <meta name="description" content="Main menu for PalaRivals Watch.">
   <script>
@@ -41,6 +42,12 @@
     <span class="ChangeLogShortcut__icon" aria-hidden="true">CL</span>
     <b>Change Log</b>
     <i aria-hidden="true">NEW</i>
+  </button>
+
+  <button class="SuggestionShortcut" id="SuggestionButton" type="button" aria-controls="SuggestionMenu" aria-expanded="false">
+    <span class="SuggestionShortcut__icon" aria-hidden="true">+</span>
+    <span><small>Community Uplink</small><b>Send an Idea</b></span>
+    <i aria-hidden="true"></i>
   </button>
 
   <main class="menu-shell">
@@ -269,6 +276,74 @@
         <span class="arcade-menu__legend"><i></i>Live <i></i>New <i></i>Encrypted</span>
         <b>Esc // Close Terminal</b>
       </footer>
+    </article>
+  </section>
+
+  <section class="suggestion-menu" id="SuggestionMenu" aria-labelledby="SuggestionTitle" aria-hidden="true" hidden>
+    <button class="suggestion-menu__backdrop" type="button" data-suggestion-close aria-label="Close suggestion terminal"></button>
+    <article class="suggestion-menu__panel" role="dialog" aria-modal="true" aria-describedby="SuggestionDescription">
+      <div class="suggestion-menu__signal" aria-hidden="true"><i></i><i></i><b>IDEA</b></div>
+      <header class="suggestion-menu__header">
+        <div class="suggestion-menu__brand" aria-hidden="true"><span>PRW</span><i></i></div>
+        <div>
+          <span>Community Channel // Direct to Development</span>
+          <h2 id="SuggestionTitle">Shape the <em>Watch</em></h2>
+          <p id="SuggestionDescription">Pitch a feature, balance change, interface improvement, or anything else that would make the game better.</p>
+        </div>
+        <button class="suggestion-menu__close" type="button" data-suggestion-close aria-label="Close suggestion terminal">&times;</button>
+      </header>
+
+      <div class="suggestion-menu__status" aria-hidden="true">
+        <span><i></i> Suggestion uplink ready</span>
+        <b><span id="SuggestionQueueCount">0</span> waiting on this device</b>
+      </div>
+
+      <form class="suggestion-form" id="SuggestionForm">
+        <label class="suggestion-form__field suggestion-form__field--category">
+          <span>Suggestion Type <b>Required</b></span>
+          <select id="SuggestionCategory" name="category" required>
+            <option value="feature">New Feature</option>
+            <option value="balance">Balance Change</option>
+            <option value="hero">Hero or Ability</option>
+            <option value="interface">Interface / Accessibility</option>
+            <option value="game-mode">Game Mode</option>
+            <option value="bug">Bug or Problem</option>
+            <option value="other">Other Idea</option>
+          </select>
+        </label>
+
+        <label class="suggestion-form__field suggestion-form__field--name">
+          <span>Your Name <small>Optional</small></span>
+          <input id="SuggestionPlayerName" name="playerName" type="text" maxlength="30" autocomplete="nickname" placeholder="Anonymous Commander">
+        </label>
+
+        <label class="suggestion-form__field suggestion-form__field--title">
+          <span>Idea Title <b>Required</b></span>
+          <input id="SuggestionIdeaTitle" name="title" type="text" minlength="3" maxlength="80" required placeholder="Give your idea a short name">
+          <small><b id="SuggestionTitleCount">0</b> / 80</small>
+        </label>
+
+        <label class="suggestion-form__field suggestion-form__field--details">
+          <span>Explain the Idea <b>Required</b></span>
+          <textarea id="SuggestionDetails" name="details" minlength="20" maxlength="1200" required placeholder="What should change, how would it work, and why would it make the game more fun?"></textarea>
+          <small><b id="SuggestionDetailsCount">0</b> / 1200</small>
+        </label>
+
+        <label class="suggestion-form__honeypot" aria-hidden="true">
+          <span>Website</span><input id="SuggestionWebsite" name="website" type="text" tabindex="-1" autocomplete="off">
+        </label>
+
+        <footer class="suggestion-form__footer">
+          <p><i></i><span><b>JSON Feedback Channel</b>Your idea and current menu theme are saved. Do not include passwords or private information.</span></p>
+          <button id="SuggestionSubmit" type="submit"><span>Transmit Suggestion</span><i aria-hidden="true">&#10140;</i></button>
+        </footer>
+      </form>
+
+      <div class="suggestion-menu__response" id="SuggestionResponse" role="status" aria-live="polite" hidden>
+        <span aria-hidden="true">&#10003;</span>
+        <div><small id="SuggestionResponseKicker">Transmission Complete</small><strong id="SuggestionResponseTitle">Idea Received</strong><p id="SuggestionResponseMessage">Your suggestion was added to the development channel.</p></div>
+        <button id="SuggestionAnother" type="button">Send Another Idea</button>
+      </div>
     </article>
   </section>
 

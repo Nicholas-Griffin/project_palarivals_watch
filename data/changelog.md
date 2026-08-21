@@ -24,6 +24,11 @@ Status: Current Build
 - Added unique Arcade color treatments for the default, Marvel Rivals, Paladins, and Overwatch menu themes.
 - Improved keyboard focus, short-screen scrolling, and mobile stacking for the mode selector.
 
+### Community Feedback
+- Added a main-menu suggestion terminal for feature requests, balance ideas, hero concepts, interface changes, game modes, and bug reports.
+- Suggestions are saved to a shared private JSON store when Vercel Blob is connected.
+- Added an automatic local queue so feedback is not lost while the shared channel is offline.
+
 ## Version 0.2.0 — Ability Draft & Balance Changes
 Date: August 20, 2026
 Status: Previous Build

@@ -74,11 +74,33 @@ const changeLogMenu = document.querySelector("#ChangeLogMenu");
 const changeLogContent = document.querySelector("#ChangeLogContent");
 const changeLogEntryCount = document.querySelector("#ChangeLogEntryCount");
 const changeLogCloseButtons = [...document.querySelectorAll("[data-changelog-close]")];
+const suggestionButton = document.querySelector("#SuggestionButton");
+const suggestionMenu = document.querySelector("#SuggestionMenu");
+const suggestionCloseButtons = [...document.querySelectorAll("[data-suggestion-close]")];
+const suggestionForm = document.querySelector("#SuggestionForm");
+const suggestionCategory = document.querySelector("#SuggestionCategory");
+const suggestionPlayerName = document.querySelector("#SuggestionPlayerName");
+const suggestionIdeaTitle = document.querySelector("#SuggestionIdeaTitle");
+const suggestionDetails = document.querySelector("#SuggestionDetails");
+const suggestionWebsite = document.querySelector("#SuggestionWebsite");
+const suggestionTitleCount = document.querySelector("#SuggestionTitleCount");
+const suggestionDetailsCount = document.querySelector("#SuggestionDetailsCount");
+const suggestionQueueCount = document.querySelector("#SuggestionQueueCount");
+const suggestionSubmit = document.querySelector("#SuggestionSubmit");
+const suggestionResponse = document.querySelector("#SuggestionResponse");
+const suggestionResponseKicker = document.querySelector("#SuggestionResponseKicker");
+const suggestionResponseTitle = document.querySelector("#SuggestionResponseTitle");
+const suggestionResponseMessage = document.querySelector("#SuggestionResponseMessage");
+const suggestionAnother = document.querySelector("#SuggestionAnother");
+
+const SUGGESTION_QUEUE_KEY = "palarivals-watch-suggestion-queue";
+const SUGGESTION_REQUEST_TIMEOUT_MS = 12_000;
 
 let transitionTimer;
 let authMenuTrigger = null;
 let arcadeMenuTrigger = null;
 let changeLogMenuTrigger = null;
+let suggestionMenuTrigger = null;
 
 function readSavedColorMode() {
   try {
@@ -165,6 +187,7 @@ function openAuthMenu(mode, trigger) {
 
   closeArcadeMenu({ restoreFocus: false });
   closeChangeLog({ restoreFocus: false });
+  closeSuggestionMenu({ restoreFocus: false });
   authMenuTrigger = trigger;
   loginPanel.dataset.authMode = isSignup ? "signup" : "login";
   authKicker.textContent = isSignup ? "New Challenger Registration" : "Account Uplink";
@@ -199,6 +222,7 @@ function closeAuthMenu() {
 function openArcadeMenu(trigger) {
   closeAuthMenu();
   closeChangeLog({ restoreFocus: false });
+  closeSuggestionMenu({ restoreFocus: false });
   arcadeMenuTrigger = trigger;
   arcadeMenu.hidden = false;
   arcadeMenu.setAttribute("aria-hidden", "false");
@@ -390,6 +414,7 @@ async function loadChangeLog() {
 function openChangeLog(trigger) {
   closeAuthMenu();
   closeArcadeMenu({ restoreFocus: false });
+  closeSuggestionMenu({ restoreFocus: false });
   changeLogMenuTrigger = trigger;
   changeLogMenu.hidden = false;
   changeLogMenu.setAttribute("aria-hidden", "false");
@@ -411,6 +436,165 @@ function closeChangeLog({ restoreFocus = true } = {}) {
   changeLogMenuTrigger = null;
 }
 
+function readSuggestionQueue() {
+  try {
+    const saved = JSON.parse(window.localStorage.getItem(SUGGESTION_QUEUE_KEY) || "[]");
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeSuggestionQueue(queue) {
+  try {
+    window.localStorage.setItem(SUGGESTION_QUEUE_KEY, JSON.stringify(queue));
+  } catch {
+    // Submission status still explains when browser storage is unavailable.
+  }
+  updateSuggestionQueueCount();
+}
+
+function updateSuggestionQueueCount() {
+  if (suggestionQueueCount) suggestionQueueCount.textContent = readSuggestionQueue().length;
+}
+
+function updateSuggestionCounters() {
+  if (suggestionTitleCount) suggestionTitleCount.textContent = suggestionIdeaTitle?.value.length || 0;
+  if (suggestionDetailsCount) suggestionDetailsCount.textContent = suggestionDetails?.value.length || 0;
+}
+
+function createSuggestionPayload() {
+  return {
+    clientSubmissionId: window.crypto?.randomUUID?.() || `suggestion-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    category: suggestionCategory.value,
+    playerName: suggestionPlayerName.value.trim() || "Anonymous Commander",
+    title: suggestionIdeaTitle.value.trim(),
+    details: suggestionDetails.value.trim(),
+    website: suggestionWebsite.value,
+    submittedAt: new Date().toISOString(),
+    context: {
+      page: "main-menu",
+      theme: body.dataset.theme || "default",
+      colorMode: body.dataset.mode || "dark"
+    }
+  };
+}
+
+async function transmitSuggestion(payload) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), SUGGESTION_REQUEST_TIMEOUT_MS);
+  try {
+    const response = await fetch("/api/suggestions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(result.error || "The suggestion channel is currently unavailable.");
+      error.status = response.status;
+      throw error;
+    }
+    return result;
+  } catch (error) {
+    if (error.name === "AbortError") throw new Error("The suggestion channel took too long to respond.");
+    throw error;
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+async function flushSuggestionQueue() {
+  const queue = readSuggestionQueue();
+  if (!queue.length) return;
+  const remaining = [...queue];
+  while (remaining.length) {
+    try {
+      await transmitSuggestion(remaining[0]);
+      remaining.shift();
+      writeSuggestionQueue(remaining);
+    } catch {
+      break;
+    }
+  }
+}
+
+function showSuggestionResponse({ storedOnline }) {
+  suggestionForm.hidden = true;
+  suggestionResponse.hidden = false;
+  suggestionResponse.dataset.state = storedOnline ? "online" : "local";
+  suggestionResponseKicker.textContent = storedOnline ? "Transmission Complete" : "Transmission Queued";
+  suggestionResponseTitle.textContent = storedOnline ? "Idea Received" : "Saved on This Device";
+  suggestionResponseMessage.textContent = storedOnline
+    ? "Your suggestion was added to the shared development JSON channel. Thank you for helping shape the game."
+    : "The shared channel did not respond, so this idea is safely queued in your browser and will retry automatically later.";
+  window.setTimeout(() => suggestionAnother?.focus(), 30);
+}
+
+function resetSuggestionForm() {
+  suggestionForm.reset();
+  suggestionForm.hidden = false;
+  suggestionResponse.hidden = true;
+  suggestionResponse.removeAttribute("data-state");
+  updateSuggestionCounters();
+  window.setTimeout(() => suggestionCategory?.focus(), 30);
+}
+
+async function handleSuggestionSubmit(event) {
+  event.preventDefault();
+  if (!suggestionForm.reportValidity()) return;
+  const payload = createSuggestionPayload();
+  suggestionSubmit.disabled = true;
+  suggestionSubmit.querySelector("span").textContent = "Transmitting...";
+  let storedOnline = false;
+  try {
+    await transmitSuggestion(payload);
+    storedOnline = true;
+  } catch (error) {
+    if (error.status && error.status < 500 && error.status !== 404) {
+      suggestionDetails.setCustomValidity(error.message);
+      suggestionDetails.reportValidity();
+      suggestionDetails.setCustomValidity("");
+      return;
+    }
+    const queue = readSuggestionQueue();
+    if (!queue.some((entry) => entry.clientSubmissionId === payload.clientSubmissionId)) queue.push(payload);
+    writeSuggestionQueue(queue.slice(-50));
+  } finally {
+    suggestionSubmit.disabled = false;
+    suggestionSubmit.querySelector("span").textContent = "Transmit Suggestion";
+  }
+  showSuggestionResponse({ storedOnline });
+  window.PRWAudio?.play("heal");
+}
+
+function openSuggestionMenu(trigger) {
+  closeAuthMenu();
+  closeArcadeMenu({ restoreFocus: false });
+  closeChangeLog({ restoreFocus: false });
+  suggestionMenuTrigger = trigger;
+  suggestionMenu.hidden = false;
+  suggestionMenu.setAttribute("aria-hidden", "false");
+  suggestionButton?.setAttribute("aria-expanded", "true");
+  body.classList.add("suggestion-menu-open");
+  updateSuggestionQueueCount();
+  flushSuggestionQueue();
+  window.PRWAudio?.play("modalOpen");
+  window.setTimeout(() => suggestionIdeaTitle?.focus(), 30);
+}
+
+function closeSuggestionMenu({ restoreFocus = true } = {}) {
+  if (!suggestionMenu || suggestionMenu.hidden) return;
+  suggestionMenu.hidden = true;
+  suggestionMenu.setAttribute("aria-hidden", "true");
+  suggestionButton?.setAttribute("aria-expanded", "false");
+  body.classList.remove("suggestion-menu-open");
+  window.PRWAudio?.play("modalClose");
+  if (restoreFocus) suggestionMenuTrigger?.focus();
+  suggestionMenuTrigger = null;
+}
+
 signupButton?.addEventListener("click", () => openAuthMenu("signup", signupButton));
 loginButton?.addEventListener("click", () => openAuthMenu("login", loginButton));
 authCloseButtons.forEach((closeButton) => closeButton.addEventListener("click", closeAuthMenu));
@@ -418,13 +602,21 @@ arcadeButton?.addEventListener("click", () => openArcadeMenu(arcadeButton));
 arcadeCloseButtons.forEach((closeButton) => closeButton.addEventListener("click", closeArcadeMenu));
 changeLogButton?.addEventListener("click", () => openChangeLog(changeLogButton));
 changeLogCloseButtons.forEach((closeButton) => closeButton.addEventListener("click", closeChangeLog));
+suggestionButton?.addEventListener("click", () => openSuggestionMenu(suggestionButton));
+suggestionCloseButtons.forEach((closeButton) => closeButton.addEventListener("click", closeSuggestionMenu));
+suggestionForm?.addEventListener("submit", handleSuggestionSubmit);
+suggestionIdeaTitle?.addEventListener("input", updateSuggestionCounters);
+suggestionDetails?.addEventListener("input", updateSuggestionCounters);
+suggestionAnother?.addEventListener("click", resetSuggestionForm);
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeAuthMenu();
     closeArcadeMenu();
     closeChangeLog();
+    closeSuggestionMenu();
   }
 });
 
 applyColorMode(readSavedColorMode(), { persist: false });
 applyTheme("default", { animate: false });
+updateSuggestionQueueCount();
