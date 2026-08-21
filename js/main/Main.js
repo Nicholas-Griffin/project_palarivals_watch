@@ -238,24 +238,42 @@ function escapeChangeLogHtml(value) {
 function formatChangeLogInline(value) {
   return escapeChangeLogHtml(value)
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/`(.+?)`/g, "<code>$1</code>");
+    .replace(/`(.+?)`/g, "<code>$1</code>")
+    .replace(/==(.+?)==/g, "<mark>$1</mark>")
+    .replace(/~~(.+?)~~/g, "<del>$1</del>")
+    .replace(/(^|[^*])\*([^*]+?)\*/g, "$1<em>$2</em>");
 }
 
 function renderChangeLog(markdown) {
   const lines = markdown.replace(/\r/g, "").split("\n");
   const output = [];
-  let listOpen = false;
+  let listTag = null;
   let entryOpen = false;
+  let balanceOpen = false;
   let entryCount = 0;
 
   const closeList = () => {
-    if (!listOpen) return;
-    output.push("</ul>");
-    listOpen = false;
+    if (!listTag) return;
+    output.push(`</${listTag}>`);
+    listTag = null;
+  };
+
+  const openList = (tag) => {
+    if (listTag === tag) return;
+    closeList();
+    output.push(`<${tag}>`);
+    listTag = tag;
+  };
+
+  const closeBalance = () => {
+    closeList();
+    if (!balanceOpen) return;
+    output.push("</div></section>");
+    balanceOpen = false;
   };
 
   const closeEntry = () => {
-    closeList();
+    closeBalance();
     if (!entryOpen) return;
     output.push("</article>");
     entryOpen = false;
@@ -270,6 +288,11 @@ function renderChangeLog(markdown) {
 
     if (line === "---") {
       closeEntry();
+      return;
+    }
+
+    if (line === ":::") {
+      closeBalance();
       return;
     }
 
@@ -288,6 +311,28 @@ function renderChangeLog(markdown) {
 
     if (!entryOpen) return;
 
+    const balanceMatch = line.match(/^:::\s*(buff|nerf|adjust|fix|new)\s+(.+)$/i);
+    if (balanceMatch) {
+      closeBalance();
+      const balanceType = balanceMatch[1].toLowerCase();
+      output.push(`<section class="changelog-balance changelog-balance--${balanceType}"><header><span>${balanceType}</span><h5>${formatChangeLogInline(balanceMatch[2])}</h5></header><div class="changelog-balance__body">`);
+      balanceOpen = true;
+      return;
+    }
+
+    if (balanceOpen && line.startsWith("Ability:")) {
+      closeList();
+      output.push(`<span class="changelog-balance__ability">Ability <b>${formatChangeLogInline(line.slice(8).trim())}</b></span>`);
+      return;
+    }
+
+    if (balanceOpen && line.startsWith("Stat:")) {
+      closeList();
+      const [label = "Stat", previousValue = "—", nextValue = "—"] = line.slice(5).split("|").map((part) => part.trim());
+      output.push(`<div class="changelog-balance__stat"><span>${formatChangeLogInline(label)}</span><del>${formatChangeLogInline(previousValue)}</del><i>→</i><ins>${formatChangeLogInline(nextValue)}</ins></div>`);
+      return;
+    }
+
     if (line.startsWith("Date:")) {
       closeList();
       output.push(`<time>${formatChangeLogInline(line.slice(5).trim())}</time>`);
@@ -295,17 +340,23 @@ function renderChangeLog(markdown) {
       closeList();
       output.push(`<span class="changelog-entry__status">${formatChangeLogInline(line.slice(7).trim())}</span>`);
     } else if (line.startsWith("### ")) {
-      closeList();
+      closeBalance();
       output.push(`<h4>${formatChangeLogInline(line.slice(4))}</h4>`);
+    } else if (line.startsWith("#### ")) {
+      closeList();
+      output.push(`<h5 class="changelog-entry__subheading">${formatChangeLogInline(line.slice(5))}</h5>`);
     } else if (line.startsWith("- ")) {
-      if (!listOpen) {
-        output.push("<ul>");
-        listOpen = true;
-      }
+      openList("ul");
       output.push(`<li>${formatChangeLogInline(line.slice(2))}</li>`);
+    } else if (/^\d+\.\s+/.test(line)) {
+      openList("ol");
+      output.push(`<li>${formatChangeLogInline(line.replace(/^\d+\.\s+/, ""))}</li>`);
     } else if (line.startsWith("> ")) {
       closeList();
-      output.push(`<blockquote>${formatChangeLogInline(line.slice(2))}</blockquote>`);
+      const callout = line.match(/^>\s*\[!(note|tip|warning|buff|nerf|fix)\]\s*(.*)$/i);
+      output.push(callout
+        ? `<blockquote class="changelog-callout changelog-callout--${callout[1].toLowerCase()}"><b>${callout[1]}</b><span>${formatChangeLogInline(callout[2])}</span></blockquote>`
+        : `<blockquote>${formatChangeLogInline(line.slice(2))}</blockquote>`);
     } else {
       closeList();
       output.push(`<p>${formatChangeLogInline(line)}</p>`);
@@ -318,7 +369,7 @@ function renderChangeLog(markdown) {
 
 async function loadChangeLog() {
   changeLogContent.setAttribute("aria-busy", "true");
-  changeLogContent.innerHTML = '<div class="changelog-menu__loading"><i></i><span>Loading development archiveâ€¦</span></div>';
+  changeLogContent.innerHTML = '<div class="changelog-menu__loading"><i></i><span>Loading development archive&hellip;</span></div>';
   changeLogEntryCount.textContent = "Synchronizing";
 
   try {
