@@ -2,11 +2,11 @@
 
 # PalaRivals Watch Development Archive
 
-## Version 0.3.0 — Leader Protocol
+## Version 0.3.0 — Arcade Expansion
 Date: August 21, 2026
 Status: Current Build
 
-### New Arcade Mode
+### Leader Protocol
 - Added **Leader Protocol**, a complete new Arcade mode with its own HTML, CSS, JavaScript, and balance data.
 - Choose one of three random hyper-powered leaders at the start of every run.
 - Build a six-unit formation against seven uniquely named AI commanders.
@@ -17,6 +17,18 @@ Status: Current Build
 - Added formation reordering, selling, rerolls, combat inspection, animated leader abilities, and elimination rounds.
 
 > The crown is powerful, but a formation that ignores its doctrine can be weaker than the sum of its parts.
+
+### Crownfall Draft
+- Added **Crownfall Draft**, a tactical Arcade mode that transforms the PalaRivals roster into a playable hero-chess army.
+- Face one AI rival in a contested draft where both commanders claim heroes from the same shared pool.
+- Assign a different hero to your pawns, rooks, knights, bishops, queen, and king before the match begins.
+- Added **90 unique hero-piece abilities**: every one of the 15 available heroes has a different ability for all six chess roles.
+- Hero abilities can alter movement, grant capture shields, vault allied pieces, rally surviving units, protect the king, or generate extra turns.
+- Added legal-move highlighting, check, checkmate, stalemate, automatic promotion, move history, piece inspection, and AI tactical responses.
+- Added a dedicated responsive command interface for drafting and playing on desktop and mobile screens.
+- Crownfall Draft is now available as Arcade Protocol 03
+
+> Six identities become an army. Draft the pieces, bend the board, and bring down the rival crown.
 
 ### Arcade Interface
 - Rebuilt the Arcade selector as a full alternate-reality command terminal.
