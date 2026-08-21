@@ -7,6 +7,7 @@
   <title>PalaRivals Watch</title>
   <link rel="stylesheet" href="css/main/Main.css">
   <link rel="stylesheet" href="css/main/Auth.css">
+  <link rel="stylesheet" href="css/main/Arcade.css">
   <link rel="stylesheet" href="css/shared/Audio.css">
   <meta name="description" content="Main menu for PalaRivals Watch.">
   <script>
@@ -77,6 +78,7 @@
           <span>Enter Lobby</span>
           <span class="button-arrow" aria-hidden="true">&#10140;</span>
         </a>
+        <button class="MainButtons MainButtons--arcade" id="ArcadeButton" type="button" aria-controls="ArcadeMenu" aria-expanded="false">Arcade</button>
         <button class="MainButtons" id="HeroCompendiumButton" type="button">Hero Compendium</button>
       </section>
 
@@ -176,6 +178,62 @@
       <footer class="prw-auth-card__footer">
         <span>Encrypted profile channel</span>
         <span>Three worlds // One identity</span>
+      </footer>
+    </article>
+  </section>
+
+  <section class="arcade-menu" id="ArcadeMenu" aria-labelledby="ArcadeMenuTitle" aria-hidden="true" hidden>
+    <button class="arcade-menu__backdrop" type="button" data-arcade-close aria-label="Close Arcade menu"></button>
+    <article class="arcade-menu__panel" role="dialog" aria-modal="true" aria-describedby="ArcadeMenuDescription">
+      <header class="arcade-menu__header">
+        <div>
+          <span>PRW // Alternate Protocols</span>
+          <h2 id="ArcadeMenuTitle">Arcade</h2>
+          <p id="ArcadeMenuDescription">Break the standard rules. Choose a combat experiment.</p>
+        </div>
+        <button type="button" class="arcade-menu__close" data-arcade-close aria-label="Close Arcade menu">×</button>
+      </header>
+
+      <div class="arcade-menu__grid">
+        <a class="arcade-mode-card arcade-mode-card--ability" href="AbilityDraft.html">
+          <span class="arcade-mode-card__number">01</span>
+          <span class="arcade-mode-card__art" aria-hidden="true">
+            <img src="Img/Characters/MarvelRivals/HulkPNG.jpeg" alt="">
+            <img src="Img/Characters/Overwatch/TracerPNG.png" alt="">
+            <img src="Img/Characters/Paladins/SerisPNG.png" alt="">
+          </span>
+          <span class="arcade-mode-card__content">
+            <small>Featured Mode // Live</small>
+            <strong>Ability Draft</strong>
+            <span>Draft any ability onto any hero and create impossible builds.</span>
+            <b>Enter Mode <i aria-hidden="true">➜</i></b>
+          </span>
+        </a>
+
+        <article class="arcade-mode-card arcade-mode-card--locked" aria-disabled="true">
+          <span class="arcade-mode-card__number">02</span>
+          <span class="arcade-mode-card__content">
+            <small>Protocol Locked</small>
+            <strong>Incoming Mode</strong>
+            <span>A new multiverse experiment will occupy this channel.</span>
+            <b>Coming Soon</b>
+          </span>
+        </article>
+
+        <article class="arcade-mode-card arcade-mode-card--locked" aria-disabled="true">
+          <span class="arcade-mode-card__number">03</span>
+          <span class="arcade-mode-card__content">
+            <small>Protocol Locked</small>
+            <strong>Incoming Mode</strong>
+            <span>Future game modes can be added here without changing the menu.</span>
+            <b>Coming Soon</b>
+          </span>
+        </article>
+      </div>
+
+      <footer class="arcade-menu__footer">
+        <span><i></i> Arcade network online</span>
+        <b>1 mode available</b>
       </footer>
     </article>
   </section>

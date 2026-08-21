@@ -66,9 +66,13 @@ const authModeCode = document.querySelector("#prwAuthModeCode");
 const authActionLabel = document.querySelector("#prwLoginButton span");
 const authCloseButtons = [...document.querySelectorAll("[data-auth-close]")];
 const usernameInput = document.querySelector("#prwUsernameInput");
+const arcadeButton = document.querySelector("#ArcadeButton");
+const arcadeMenu = document.querySelector("#ArcadeMenu");
+const arcadeCloseButtons = [...document.querySelectorAll("[data-arcade-close]")];
 
 let transitionTimer;
 let authMenuTrigger = null;
+let arcadeMenuTrigger = null;
 
 function readSavedColorMode() {
   try {
@@ -153,6 +157,7 @@ function setAuthButtonState(isOpen) {
 function openAuthMenu(mode, trigger) {
   const isSignup = mode === "signup";
 
+  closeArcadeMenu({ restoreFocus: false });
   authMenuTrigger = trigger;
   loginPanel.dataset.authMode = isSignup ? "signup" : "login";
   authKicker.textContent = isSignup ? "New Challenger Registration" : "Account Uplink";
@@ -184,12 +189,44 @@ function closeAuthMenu() {
   authMenuTrigger = null;
 }
 
+function openArcadeMenu(trigger) {
+  closeAuthMenu();
+  arcadeMenuTrigger = trigger;
+  arcadeMenu.hidden = false;
+  arcadeMenu.setAttribute("aria-hidden", "false");
+  arcadeButton?.setAttribute("aria-expanded", "true");
+  body.classList.add("arcade-menu-open");
+  window.PRWAudio?.play("modalOpen");
+  arcadeMenu.querySelector(".arcade-mode-card--ability")?.focus();
+}
+
+function closeArcadeMenu({ restoreFocus = true } = {}) {
+  if (!arcadeMenu || arcadeMenu.hidden) {
+    return;
+  }
+
+  arcadeMenu.hidden = true;
+  arcadeMenu.setAttribute("aria-hidden", "true");
+  arcadeButton?.setAttribute("aria-expanded", "false");
+  body.classList.remove("arcade-menu-open");
+  window.PRWAudio?.play("modalClose");
+
+  if (restoreFocus) {
+    arcadeMenuTrigger?.focus();
+  }
+
+  arcadeMenuTrigger = null;
+}
+
 signupButton?.addEventListener("click", () => openAuthMenu("signup", signupButton));
 loginButton?.addEventListener("click", () => openAuthMenu("login", loginButton));
 authCloseButtons.forEach((closeButton) => closeButton.addEventListener("click", closeAuthMenu));
+arcadeButton?.addEventListener("click", () => openArcadeMenu(arcadeButton));
+arcadeCloseButtons.forEach((closeButton) => closeButton.addEventListener("click", closeArcadeMenu));
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
     closeAuthMenu();
+    closeArcadeMenu();
   }
 });
 

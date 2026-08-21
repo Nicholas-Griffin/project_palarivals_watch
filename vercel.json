@@ -12,6 +12,10 @@
     {
       "source": "/profile",
       "destination": "/Profile.html"
+    },
+    {
+      "source": "/arcade/ability-draft",
+      "destination": "/AbilityDraft.html"
     }
   ],
   "headers": [
